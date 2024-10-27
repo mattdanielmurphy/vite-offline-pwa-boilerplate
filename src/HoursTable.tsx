@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from './supabaseClient';
-import { Report } from './interfaces/Report';
+import { HoursTableReport } from './interfaces/Report';
 import PullToRefresh from 'react-pull-to-refresh';
 import { FaSpinner } from 'react-icons/fa';
+
+
 
 interface DailyHours {
   [date: string]: {
@@ -88,7 +90,7 @@ const HoursTable: React.FC = () => {
     return minutes === 0 ? `${wholeHours}` : `${wholeHours}.${minutes.toString().padStart(2, '0')}`;
   };
 
-  const processReports = (reports: Report[]) => {
+  const processReports = (reports: HoursTableReport[]) => {
     const hours: DailyHours = {};
     const totals: TotalHours = {};
     const uniqueDates = new Set<string>();
