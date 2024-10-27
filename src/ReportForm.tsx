@@ -78,285 +78,214 @@ const ReportForm: React.FC = () => {
         return;
       }
   
-      // Validate tasks
-      if (tasks.some(task => !task.time || !task.description)) {
-        alert("Please fill in all task fields");
-        return;
-      }
+      const { data, error } = await supabase
+        .from('reports')
+        .insert([
+          { 
+            date, 
+            name: name === 'Other' ? otherName : name, 
+            weather: weather === 'Other' ? otherWeather : weather, 
+            time_in: timeIn,
+            time_out: timeOut,
+            details,
+            tasks: JSON.stringify(tasks),
+            is_overtime: overtime,
+            overtime_hours: overtime ? overtimeHours : 0
+          }
+        ]);
   
-      // Calculate shift duration
-      const [inHours, inMinutes] = timeIn.split(':').map(Number);
-      const [outHours, outMinutes] = timeOut.split(':').map(Number);
-      let shiftDuration = (outHours * 60 + outMinutes) - (inHours * 60 + inMinutes);
-      if (shiftDuration < 0) shiftDuration += 24 * 60; // Handle overnight shifts
-      const shiftHours = Math.ceil(shiftDuration / 60);
-
-      // Confirm submission if fewer tasks than shift hours
-      if (tasks.length < shiftHours) {
-        const confirm = window.confirm(`You've entered ${tasks.length} tasks for a ${shiftHours}-hour shift. Are you sure you want to submit?`);
-        if (!confirm) return;
-      }
-  
-      // New validation for overtime
-      if (totalHours > 8 && !overtime) {
-        const confirm = window.confirm("You've worked more than 8 hours. Did you forget to check overtime?");
-        if (!confirm) return;
-      }
-  
-      // Prepare data for Supabase
-      const reportData = {
-        date,
-        name: name === 'Other' ? otherName : name,
-        weather: weather === 'Other' ? otherWeather : weather,
-        time_in: timeIn,
-        time_out: timeOut,
-        details: details || null,
-        tasks: JSON.stringify(tasks),
-        is_overtime: overtime,
-        overtime_hours: overtime ? overtimeHours : 0,
-        total_hours: totalHours // This is now a number
-      };
-  
-      try {
-        const { data, error } = await supabase
-          .from('reports')
-          .insert([reportData]);
-  
-        if (error) throw error;
-  
-        alert("Report submitted successfully!");
-        // Reset form fields here if needed
-      } catch (error) {
-        console.error('Error submitting report:', error);
-        alert("An error occurred while submitting the report. Please try again.");
-      }
-    };
-  
-    const validateDate = (selectedDate: string) => {
-      const todayDate = getTodayDateString();
-      if (selectedDate > todayDate) {
-        alert("Selected date is in the future. Reverting to today's date.");
-        setDate(todayDate);
+      if (error) {
+        console.error('Error inserting report:', error);
+        alert('Failed to submit report. Please try again.');
       } else {
-        setDate(selectedDate);
-        setIsTodaySelected(selectedDate === todayDate);
+        alert('Report submitted successfully!');
+        // Reset form
+        setDate(getTodayDateString());
+        setName('');
+        setWeather('');
+        setTimeIn(getDefaultTimeIn());
+        setTimeOut(getDefaultTimeOut(getDefaultTimeIn()));
+        setDetails('');
+        setTasks([{ time: getDefaultTimeIn(), description: '' }]);
+        setOvertime(false);
+        setOvertimeHours(0);
+        setOtherName('');
+        setOtherWeather('');
       }
     };
   
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!typing) {
-        validateDate(e.target.value);
-      }
+      setDate(e.target.value);
+      setIsTodaySelected(e.target.value === getTodayDateString());
     };
   
     const handleDateInput = () => {
       setTyping(true);
-      const typingTimeout = setTimeout(() => {
-        setTyping(false);
-      }, 500);
-  
-      return () => clearTimeout(typingTimeout);
     };
   
-    const handleDateBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      if (typing) {
-        validateDate(e.target.value);
-      }
+    const handleDateBlur = () => {
+      setTyping(false);
     };
 
-    const handleTimeInChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newTimeIn = e.target.value;
-      setTimeIn(newTimeIn);
-      setTimeOut(getDefaultTimeOut(newTimeIn));
-      setTasks(tasks => [{ ...tasks[0], time: newTimeIn }, ...tasks.slice(1)]);
-    };
-
-    useEffect(() => {
-      const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleColorSchemeChange = (e: MediaQueryListEvent) => {
-        document.body.classList.toggle('dark-mode', e.matches);
-      };
-      
-      darkModeMediaQuery.addListener(handleColorSchemeChange);
-      document.body.classList.toggle('dark-mode', darkModeMediaQuery.matches);
-
-      return () => {
-        darkModeMediaQuery.removeListener(handleColorSchemeChange);
-      };
-    }, []);
-  
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <form onSubmit={submitReport} style={{ maxWidth: '600px', margin: '0 auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: 'var(--bg-color)' }}>
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              <label htmlFor="date-input" style={{ width: '80px', marginRight: '10px', textAlign: 'center' }}>Date</label>
-              <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                <input
-                  id="date-input"
-                  type="date"
-                  value={date}
-                  onChange={handleDateChange}
-                  onInput={handleDateInput}
-                  onBlur={handleDateBlur}
-                  style={{ flex: 1, padding: '5px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'var(--input-bg-color)' }}
-                />
-                {isTodaySelected && <span style={{ marginLeft: '10px', fontStyle: 'italic', color: '#0066cc' }}>today</span>}
-              </div>
-            </div>
-  
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              <label htmlFor="name-input" style={{ width: '80px', marginRight: '10px', textAlign: 'center' }}>Name</label>
-              <select
-                id="name-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={{ flex: 1, padding: '5px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'var(--input-bg-color)' }}
-              >
-                <option value="">Select a name</option>
-                {['Manpreet', 'Colin', 'Matthew', 'Jason', 'Terry', 'Marty', 'Other'].map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-              {name === 'Other' && (
-                <input
-                  type="text"
-                  value={otherName}
-                  onChange={(e) => setOtherName(e.target.value)}
-                  placeholder="Enter name"
-                  style={{ marginLeft: '10px', padding: '5px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'var(--input-bg-color)' }}
-                />
-              )}
-            </div>
-  
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              <label htmlFor="weather-input" style={{ width: '80px', marginRight: '10px', textAlign: 'center' }}>Weather</label>
-              <select
-                id="weather-input"
-                value={weather}
-                onChange={(e) => setWeather(e.target.value)}
-                style={{ flex: 1, padding: '5px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'var(--input-bg-color)' }}
-              >
-                <option value="">Select weather</option>
-                {['Sunny', 'Cloudy', 'Rainy', 'Snowy', 'Windy', 'Foggy', 'Other'].map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-              {weather === 'Other' && (
-                <input
-                  type="text"
-                  value={otherWeather}
-                  onChange={(e) => setOtherWeather(e.target.value)}
-                  placeholder="Enter weather"
-                  style={{ marginLeft: '10px', padding: '5px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'var(--input-bg-color)' }}
-                />
-              )}
-            </div>
-  
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              <label htmlFor="time-in-input" style={{ width: '80px', marginRight: '10px', textAlign: 'center' }}>Time In</label>
-              <input
-                id="time-in-input"
-                type="time"
-                value={timeIn}
-                onChange={handleTimeInChange}
-                style={{ flex: 1, padding: '5px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'var(--input-bg-color)' }}
-              />
-            </div>
-  
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              <label htmlFor="time-out-input" style={{ width: '80px', marginRight: '10px', textAlign: 'center' }}>Time Out</label>
-              <input
-                id="time-out-input"
-                type="time"
-                value={timeOut}
-                onChange={(e) => setTimeOut(e.target.value)}
-                style={{ flex: 1, padding: '5px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'var(--input-bg-color)' }}
-              />
-            </div>
-  
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              <label htmlFor="details-input" style={{ width: '80px', marginRight: '10px', textAlign: 'center' }}>Details</label>
-              <textarea
-                id="details-input"
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-                style={{ flex: 1, padding: '5px', border: '1px solid #ccc', borderRadius: '4px', height: '80px', backgroundColor: 'var(--input-bg-color)' }}
-              ></textarea>
-            </div>
+        <div className="report-form">
+            <h1>New Report</h1>
+            <form onSubmit={submitReport}>
+                <div className="form-group">
+                    <label htmlFor="date-input">Date</label>
+                    <div className="input-group">
+                        <input
+                            id="date-input"
+                            type="date"
+                            value={date}
+                            onChange={handleDateChange}
+                            onInput={handleDateInput}
+                            onBlur={handleDateBlur}
+                        />
+                        {isTodaySelected && !typing && <span className="today-indicator">today</span>}
+                    </div>
+                </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              <label htmlFor="total-hours" style={{ width: '80px', marginRight: '10px', textAlign: 'center' }}>Total Hours</label>
-              <input
-                id="total-hours"
-                type="text"
-                value={totalHours.toFixed(2)}
-                readOnly
-                style={{ flex: 1, padding: '5px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'var(--input-bg-color)' }}
-              />
-            </div>
-          </div>
-  
-          <div style={{ marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>Tasks</h3>
-            {tasks.map((task, index) => (
-              <div key={index} style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                <input
-                  type="time"
-                  value={task.time}
-                  onChange={(e) => {
-                    const newTasks = [...tasks];
-                    newTasks[index].time = e.target.value;
-                    setTasks(newTasks);
-                  }}
-                  style={{ padding: '5px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'var(--input-bg-color)' }}
-                  placeholder="Time"
-                />
-                <input
-                  type="text"
-                  value={task.description}
-                  onChange={(e) => {
-                    const newTasks = [...tasks];
-                    newTasks[index].description = e.target.value;
-                    setTasks(newTasks);
-                  }}
-                  style={{ flex: 1, padding: '5px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'var(--input-bg-color)' }}
-                  placeholder="Description"
-                />
-              </div>
-            ))}
-            <button type="button" onClick={addTask} style={{ padding: '5px 10px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Add Task</button>
-          </div>
-  
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-            <label htmlFor="overtime-input" style={{ width: '80px', marginRight: '10px', textAlign: 'center' }}>Overtime?</label>
-            <input
-              id="overtime-input"
-              type="checkbox"
-              checked={overtime}
-              onChange={(e) => setOvertime(e.target.checked)}
-              style={{ width: '20px', height: '20px' }}
-            />
-            {overtime && (
-              <div style={{ display: 'flex', alignItems: 'center', marginLeft: '20px' }}>
-                <label htmlFor="overtime-hours-input" style={{ marginRight: '10px' }}>Hours:</label>
-                <input
-                  id="overtime-hours-input"
-                  type="number"
-                  value={overtimeHours}
-                  onChange={(e) => setOvertimeHours(parseFloat(e.target.value))}
-                  min="0"
-                  step="1"
-                  style={{ width: '60px', padding: '5px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: 'var(--input-bg-color)' }}
-                />
-              </div>
-            )}
-          </div>
-  
-          <button type="submit" style={{ width: '100%', padding: '10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Submit</button>
-        </form>
-      </div>
+                <div className="form-group">
+                    <label htmlFor="name-input">Name</label>
+                    <select
+                        id="name-input"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                    >
+                        <option value="">Select a name</option>
+                        {['Manpreet', 'Colin', 'Matthew', 'Jason', 'Terry', 'Marty', 'Other'].map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                        ))}
+                    </select>
+                    {name === 'Other' && (
+                        <input
+                            type="text"
+                            value={otherName}
+                            onChange={(e) => setOtherName(e.target.value)}
+                            placeholder="Enter name"
+                        />
+                    )}
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="weather-input">Weather</label>
+                    <select
+                        id="weather-input"
+                        value={weather}
+                        onChange={(e) => setWeather(e.target.value)}
+                    >
+                        <option value="">Select weather</option>
+                        {['Sunny', 'Cloudy', 'Rainy', 'Snowy', 'Windy', 'Other'].map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                        ))}
+                    </select>
+                    {weather === 'Other' && (
+                        <input
+                            type="text"
+                            value={otherWeather}
+                            onChange={(e) => setOtherWeather(e.target.value)}
+                            placeholder="Enter weather"
+                        />
+                    )}
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="time-in-input">Time In</label>
+                    <input
+                        id="time-in-input"
+                        type="time"
+                        value={timeIn}
+                        onChange={(e) => setTimeIn(e.target.value)}
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="time-out-input">Time Out</label>
+                    <input
+                        id="time-out-input"
+                        type="time"
+                        value={timeOut}
+                        onChange={(e) => setTimeOut(e.target.value)}
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="details-input">Details</label>
+                    <textarea
+                        id="details-input"
+                        value={details}
+                        onChange={(e) => setDetails(e.target.value)}
+                        rows={4}
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="total-hours-input">Total Hours</label>
+                    <input
+                        id="total-hours-input"
+                        type="number"
+                        value={totalHours.toFixed(2)}
+                        readOnly
+                    />
+                </div>
+
+                <div className="form-group" id="tasks-container">
+                  <h3>Tasks</h3>
+                      {tasks.map((task, index) => (
+                          <div key={index} className="task-input">
+                              <input
+                                  type="time"
+                                  value={task.time}
+                                  onChange={(e) => {
+                                      const newTasks = [...tasks];
+                                      newTasks[index].time = e.target.value;
+                                      setTasks(newTasks);
+                                  }}
+                                  placeholder="Time"
+                              />
+                              <input
+                                  type="text"
+                                  value={task.description}
+                                  onChange={(e) => {
+                                      const newTasks = [...tasks];
+                                      newTasks[index].description = e.target.value;
+                                      setTasks(newTasks);
+                                  }}
+                                  placeholder="Description"
+                              />
+                          </div>
+                      ))}
+                <button type="button" onClick={addTask} className="secondary-button">Add Task</button>
+                </div>
+
+                <div className="form-group checkbox-group">
+                    <label htmlFor="overtime-input">Overtime?</label>
+                    <input
+                        id="overtime-input"
+                        type="checkbox"
+                        checked={overtime}
+                        onChange={(e) => setOvertime(e.target.checked)}
+                    />
+                    {overtime && (
+                        <div className="overtime-hours">
+                            <label htmlFor="overtime-hours-input">Hours:</label>
+                            <input
+                                id="overtime-hours-input"
+                                type="number"
+                                value={overtimeHours}
+                                onChange={(e) => setOvertimeHours(parseFloat(e.target.value))}
+                                min="0"
+                                step="1"
+                            />
+                        </div>
+                    )}
+                </div>
+
+                <button type="submit">Submit</button>
+            </form>
+        </div>
     );
-  };
+};
 
 export default ReportForm;
