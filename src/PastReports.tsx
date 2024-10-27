@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
 
 interface Report {
-  id: number;
+  id?: number;
   date: string;
   name: string;
   weather: string;
@@ -108,7 +108,7 @@ const PastReports: React.FC = () => {
             <h3 style={tasksHeaderStyle}>Tasks</h3>
             <table style={tasksTableStyle}>
               <tbody>
-                {formatTasks(report.tasks).map((task, index) => (
+                {formatTasks(report.tasks).map((task: { time: string; description: string }, index: number) => (
                   <tr key={index}>
                     <td style={taskTimeStyle}>{formatTime(task.time)}</td>
                     <td style={taskDescriptionStyle}>{task.description}</td>

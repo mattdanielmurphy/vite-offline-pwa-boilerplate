@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
 
 interface Report {
-  id: number;
+  id?: number;
   date: string;
   name: string;
   time_in: string;
