@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "
-./App.css"
+import "./App.css"
 
 function App() {
   const [date, setDate] = useState<string>(getTodayDateString());
