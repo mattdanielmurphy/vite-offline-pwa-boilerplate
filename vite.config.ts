@@ -14,7 +14,7 @@ export default defineConfig({
         "**/*",
       ],
       manifest: {
-        "theme_color": "#F6CC35",
+        "theme_color": "#1a1a1a",
         "background_color": "#FFFFFF",
         "display": "standalone",
         "scope": "/",
