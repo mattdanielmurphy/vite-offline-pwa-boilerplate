@@ -19,9 +19,9 @@ export default defineConfig({
         "display": "standalone",
         "scope": "/",
         "start_url": "/",
-        "short_name": "Vite PWA",
-        "description": "Vite PWA Boilerplate",
-        "name": "Vite PWA Boilerplate",
+        "short_name": "Shift Reporter",
+        "description": "Shift reporter for the Admiralty. Bespoke app by Matthew Daniel Murphy.",
+        "name": "Shift Reporter",
         "icons": [
             {
                 "src": "/icon-192x192.png",
