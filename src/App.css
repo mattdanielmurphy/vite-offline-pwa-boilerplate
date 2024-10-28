@@ -11,6 +11,14 @@
   --input-bg-color: #eeeeee;
   --report-bg-color: #f9f9f9;
   --border-color: #cccccc;
+  color-scheme: light dark;
+  --theme-background-color: rgb(225, 225, 225);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --theme-background-color: rgb(56, 55, 54);
+  }
 }
 
 .dark-mode {
@@ -219,3 +227,4 @@ button {
     display: none !important;
   }
 }
+
