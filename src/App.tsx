@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Link, Routes, useLocation } from 'react
 import ReportForm from './ReportForm';
 import PastReports from './PastReports';
 import HoursTable from './HoursTable';
+import { supabase } from './supabaseClient'; // Import supabase here
 import './App.css';
 import { FaClipboardList, FaHistory, FaClock } from 'react-icons/fa';
 
@@ -48,6 +49,32 @@ const App: React.FC = () => {
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
+  const [reports, setReports] = useState<any[]>([]); // Specify the type of reports as any[]
+  const [loadingReports, setLoadingReports] = useState(true); // Loading state for reports
+
+  const fetchReports = async () => {
+    setLoadingReports(true);
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching reports:', error);
+    } else {
+      setReports(data ? data : []);
+    }
+    setLoadingReports(false);
+  };
+
+  const refreshReports = () => {
+    fetchReports(); // Call fetchReports to refresh data
+  };
+
+  useEffect(() => {
+    fetchReports(); // Fetch reports on component mount
+  }, []);
+
   useEffect(() => {
     const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleColorSchemeChange = (e: MediaQueryListEvent) => {
@@ -65,15 +92,31 @@ const App: React.FC = () => {
     document.body.classList.toggle('dark-mode', isDarkMode);
   }, [isDarkMode]);
 
+  const sortedReports = reports.sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    
+    // First, compare by date
+    if (dateB.getTime() !== dateA.getTime()) {
+      return dateB.getTime() - dateA.getTime(); // Sort by date in descending order
+    }
+
+    // If dates are the same, compare by time
+    const timeA = a.time_in; // Assuming time_in is in 'HH:mm' format
+    const timeB = b.time_in;
+
+    return timeB.localeCompare(timeA); // Sort by time in descending order
+  });
+
   return (
     <Router>
       <div style={{ maxWidth: '800px', margin: '0 auto' }} className={isDarkMode ? 'dark-mode' : ''}>
         <Navigation isDarkMode={isDarkMode} />
-        <div style={{ paddingTop: '20px', paddingBottom: '90px' }}>
+        <div id='content' style={{ paddingTop: '20px', paddingBottom: '90px' }}>
           <Routes>
-            <Route path="/" element={<ReportForm />} />
-            <Route path="/past-reports" element={<PastReports />} />
-            <Route path="/hours-table" element={<HoursTable />} />
+            <Route path="/" element={<ReportForm onReportSubmit={refreshReports} />} />
+            <Route path="/past-reports" element={<PastReports reports={sortedReports} loading={loadingReports} onRefresh={refreshReports} />} />
+            <Route path="/hours-table" element={<HoursTable reports={reports} onRefresh={refreshReports} />} />
           </Routes>
         </div>
       </div>
@@ -116,6 +159,7 @@ const mobileNavStyle = (isDarkMode: boolean): React.CSSProperties => ({
   backgroundColor: isDarkMode ? '#1C1C1E' : '#f8f8f8',
   borderTop: `1px solid ${isDarkMode ? '#38383A' : '#e7e7e7'}`,
   height: '70px',
+  paddingBottom: '20px',
   zIndex: 1000,
 });
 
@@ -129,17 +173,5 @@ const mobileLinkStyle = (isActive: boolean, isDarkMode: boolean): React.CSSPrope
     : (isDarkMode ? '#98989F' : '#8E8E93'),
   fontSize: '12px',
 });
-
-const buttonStyle: React.CSSProperties = {
-  padding: '10px 15px',
-  fontSize: '16px',
-  backgroundColor: '#4CAF50',
-  color: 'white',
-  border: 'none',
-  borderRadius: '5px',
-  cursor: 'pointer',
-  textDecoration: 'none',
-  display: 'inline-block',
-};
 
 export default App;
