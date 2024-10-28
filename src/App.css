@@ -200,3 +200,22 @@ button {
     padding: 0 20px;
   }
 }
+
+.desktop-nav {
+  margin: 20px 0;
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .desktop-nav {
+    display: flex !important;
+  }
+
+  #content {
+    padding-top: 50px !important;
+  }
+
+  .mobile-nav {
+    display: none !important;
+  }
+}

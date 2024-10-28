@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import "./App.css"
 
-const ReportForm: React.FC = () => {
+const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }) => {
     const [date, setDate] = useState<string>(getTodayDateString());
     const [name, setName] = useState<string>('');
     const [weather, setWeather] = useState<string>('');
@@ -99,6 +99,8 @@ const ReportForm: React.FC = () => {
         alert('Failed to submit report. Please try again.');
       } else {
         alert('Report submitted successfully!');
+        // Call the onReportSubmit callback
+        onReportSubmit();
         // Reset form
         setDate(getTodayDateString());
         setName('');
@@ -217,16 +219,6 @@ const ReportForm: React.FC = () => {
                         value={details}
                         onChange={(e) => setDetails(e.target.value)}
                         rows={4}
-                    />
-                </div>
-
-                <div className="form-group">
-                    <label htmlFor="total-hours-input">Total Hours</label>
-                    <input
-                        id="total-hours-input"
-                        type="number"
-                        value={totalHours.toFixed(2)}
-                        readOnly
                     />
                 </div>
 
