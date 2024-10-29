@@ -16,7 +16,6 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
     const [overtimeHours, setOvertimeHours] = useState<number>(0);
     const [otherName, setOtherName] = useState<string>('');
     const [otherWeather, setOtherWeather] = useState<string>('');
-    const [totalHours, setTotalHours] = useState<number>(0);
   
     function getTodayDateString(): string {
       const today = new Date();
@@ -63,7 +62,6 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
   
     useEffect(() => {
         const hours = calculateHours(timeIn, timeOut);
-        setTotalHours(hours);
         if (overtime && hours > 8) {
             setOvertimeHours(hours - 8);
         }
@@ -78,6 +76,9 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
         return;
       }
   
+      // Calculate total hours worked
+      const totalHoursWorked = calculateHours(timeIn, timeOut); // Calculate total hours
+  
       const { data, error } = await supabase
         .from('reports')
         .insert([
@@ -90,7 +91,8 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
             details,
             tasks: JSON.stringify(tasks),
             is_overtime: overtime,
-            overtime_hours: overtime ? overtimeHours : 0
+            overtime_hours: overtime ? overtimeHours : 0,
+            total_hours: totalHoursWorked // Add total hours to the database
           }
         ]);
   

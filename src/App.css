@@ -203,8 +203,21 @@ button {
 }
 
 .desktop-nav {
-  margin: 20px 0;
-  gap: 20px;
+  margin: 15px 0;
+  justify-content: center;
+  /* gap: 20px; */
+}
+.desktop-nav a {
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.desktop-nav a:hover {
+  background: #eee;
+}
+.dark-mode .desktop-nav a:hover {
+  background: #222;
+  color: #eee !important;
 }
 
 @media (min-width: 768px) {
@@ -221,3 +234,19 @@ button {
   }
 }
 
+/* Add this class to the end of your App.css file */
+.delete-button {
+  background: none !important;
+  border: none; /* No border */
+  width: 40px; /* Adjust width to fit the icon */
+  height: 40px; /* Adjust height for better alignment */
+  display: flex; /* Flexbox for centering */
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
+  border-radius: 5px; /* Optional: add border radius for styling */
+  cursor: pointer; /* Pointer cursor on hover */
+  margin: 0; /* Remove any margin that might affect alignment */
+  margin-top: -15px;
+  padding: 0; /* Remove padding to ensure consistent size */
+  vertical-align: middle; /* Align vertically with other elements */
+}

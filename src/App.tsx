@@ -3,9 +3,10 @@ import { BrowserRouter as Router, Route, Link, Routes, useLocation } from 'react
 import ReportForm from './ReportForm';
 import PastReports from './PastReports';
 import HoursTable from './HoursTable';
-import { supabase } from './supabaseClient'; // Import supabase here
+import { supabase } from './supabaseClient';
 import './App.css';
-import { FaClipboardList, FaHistory, FaClock } from 'react-icons/fa';
+import { FaClipboardList, FaHistory, FaClock, FaCog } from 'react-icons/fa';
+import Settings from './Settings';
 
 const Navigation: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
   const location = useLocation();
@@ -25,6 +26,10 @@ const Navigation: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
           <FaClock size={16} style={{ marginRight: '5px' }} />
           Hours Table
         </Link>
+        <Link to="/settings" style={desktopLinkStyle(location.pathname === '/settings', isDarkMode)}>
+          <FaCog size={16} style={{ marginRight: '5px' }} />
+          Settings
+        </Link>
       </nav>
       <nav className="mobile-nav" style={mobileNavStyle(isDarkMode)}>
         <Link to="/" style={mobileLinkStyle(location.pathname === '/', isDarkMode)}>
@@ -38,6 +43,10 @@ const Navigation: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
         <Link to="/hours-table" style={mobileLinkStyle(location.pathname === '/hours-table', isDarkMode)}>
           <FaClock size={24} />
           <span>Hours Table</span>
+        </Link>
+        <Link to="/settings" style={mobileLinkStyle(location.pathname === '/settings', isDarkMode)}>
+          <FaCog size={24} />
+          <span>Settings</span>
         </Link>
       </nav>
     </>
@@ -110,13 +119,14 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }} className={isDarkMode ? 'dark-mode' : ''}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }} className={isDarkMode ? 'dark-mode' : ''}>
         <Navigation isDarkMode={isDarkMode} />
         <div id='content' style={{ paddingTop: '20px', paddingBottom: '90px' }}>
           <Routes>
             <Route path="/" element={<ReportForm onReportSubmit={refreshReports} />} />
             <Route path="/past-reports" element={<PastReports reports={sortedReports} loading={loadingReports} onRefresh={refreshReports} />} />
             <Route path="/hours-table" element={<HoursTable reports={reports} onRefresh={refreshReports} />} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </div>
       </div>
@@ -126,13 +136,8 @@ const App: React.FC = () => {
 
 const desktopNavStyle = (isDarkMode: boolean): React.CSSProperties => ({
   display: 'none',
-  position: 'fixed',
-  top: 0,
-  left: '50%',
-  transform: 'translateX(-50%)',
   padding: '10px 20px',
   zIndex: 1000,
-  backgroundColor: isDarkMode ? '#1C1C1E' : '#f8f8f8',
   width: '100%',
   maxWidth: '800px',
 });
@@ -141,7 +146,7 @@ const desktopLinkStyle = (isActive: boolean, isDarkMode: boolean): React.CSSProp
   textDecoration: 'none',
   color: isActive 
     ? (isDarkMode ? '#0A84FF' : '#007AFF') 
-    : (isDarkMode ? '#98989F' : '#8E8E93'),
+    : (isDarkMode ? '#98989F' : '#555'),
   fontSize: '16px',
   fontWeight: isActive ? 'bold' : 'normal',
   display: 'flex',
