@@ -80,7 +80,7 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 			const nightEnd = parseISO('1970-01-01T07:45'); // 07:45
 			const morningStart = parseISO('1970-01-01T07:44'); // 07:44
 
-			console.log(currentDateTime, isAfter(currentDateTime, earlyNightStart));
+			console.log(currentDateTime, isAfter(currentDateTime, earlyNightStart!));
 
 			// Determine timeIn based on current time
 			if (earlyNightStart !== undefined && isAfter(currentDateTime, earlyNightStart)) {
