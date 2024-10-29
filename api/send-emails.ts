@@ -55,11 +55,11 @@ export async function POST(request: Request) {
 
     // Iterate over each email object
     for (const email of emails) {
-      console.log(email, email.to, email.frequency)
+      const {address, frequency, enabled, subject} = email
       if (!process.env.JWT_SECRET) {
         return new Response(JSON.stringify({ error: 'JWT_SECRET is not defined' }), { status: 500 });
       }
-      const token = jwt.sign({ address: email.to, frequency: email.frequency }, process.env.JWT_SECRET, { expiresIn: '1h' }); // Generate token
+      const token = jwt.sign({ address, frequency, enabled }, process.env.JWT_SECRET, { expiresIn: '1h' }); // Generate token
       if (!process.env.VERCEL_URL) {
         throw new Error('VERCEL_URL is not defined'); // Throw an error if VERCEL_URL is undefined
       }
@@ -67,7 +67,8 @@ export async function POST(request: Request) {
 
       const mailOptions = {
         from: process.env.EMAIL_USER,
-        ...email, // to, subject
+        to: address,
+        subject,
         text: `${email.text}${email.includeConfirmationLink ? `\n${confirmationLink}` : ''}`, // Include text and confirmation link conditionally
       };
 

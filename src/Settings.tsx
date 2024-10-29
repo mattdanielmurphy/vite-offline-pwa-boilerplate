@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { FaTrashAlt } from 'react-icons/fa'; // Import the trash icon
+import React, { useState, useEffect } from 'react';
+import { FaTrashAlt } from 'react-icons/fa';
+import { supabase } from './supabaseClient';
 
 interface EmailSetting {
   address: string;
@@ -8,13 +9,32 @@ interface EmailSetting {
 }
 
 const Settings: React.FC = () => {
-  const [emailSettings, setEmailSettings] = useState<EmailSetting[]>([
-    { address: 'email@example.com', frequency: 'daily', enabled: true },
-  ]);
+  const [emailSettings, setEmailSettings] = useState<EmailSetting[]>([]);
 
   const [notification, setNotification] = useState<string | null>(null); // Notification state
   const [changesMade, setChangesMade] = useState<boolean>(false); // Track if changes are made
   const [loading, setLoading] = useState<boolean>(false); // Loading state
+  const [fetching, setFetching] = useState<boolean>(false); // New loading state for fetching
+
+  useEffect(() => {
+    const fetchEmailSettings = async () => {
+      setFetching(true); // Set fetching to true when starting to fetch
+      const { data: users, error: userError } = await supabase
+        .from('report-email-recipients')
+        .select('address, frequency, enabled');
+
+      if (userError) {
+        console.error('Error fetching email settings:', userError);
+        setFetching(false); // Reset fetching state on error
+        return; // Exit if there's an error
+      }
+
+      setEmailSettings(users); // Populate email settings with fetched data
+      setFetching(false); // Reset fetching state after successful fetch
+    };
+
+    fetchEmailSettings(); // Call the fetch function
+  }, []); // Empty dependency array to run once on mount
 
   const handleToggle = (index: number) => {
     const updatedSettings = [...emailSettings];
@@ -39,14 +59,14 @@ const Settings: React.FC = () => {
   const handleSaveChanges = async () => {
     setLoading(true); // Set loading to true when saving starts
     // Logic to save changes (e.g., API call)
-    const modifiedEmails = emailSettings.filter(setting => setting.enabled);
-    const confirmationEmails = modifiedEmails.map(({ address, frequency }) => {
+    const confirmationEmails = emailSettings.map(({ address, frequency, enabled }) => {
       return {
-        to: address,
-        text: `Click the link below to confirm your subscription to Admiralty shift reports on a ${frequency} basis:`,
-        subject: 'Confirm subscription to Admiralty shift reports',
+        address,
+        text: `Click the link below to confirm that you'd like to ${enabled ? 'subscribe to' : 'unsubscribe from'} Admiralty shift reports on a ${frequency} basis:`,
+        subject: enabled ? 'Confirm subscription to Admiralty shift reports' : 'Confirm unsubscription from Admiralty shift reports',
         includeConfirmationLink: true,
-        frequency
+        frequency,
+        enabled
       };
     });
 
@@ -89,6 +109,7 @@ const Settings: React.FC = () => {
   return (
     <div>
       <h2>Settings</h2>
+      {fetching && <div>Loading email settings...</div>} {/* Display loading indicator for fetching */}
       {notification && <div style={{ color: 'orange' }}>{notification}</div>} {/* Display notification */}
       <form>
         <h3>Scheduled Email Reports</h3>

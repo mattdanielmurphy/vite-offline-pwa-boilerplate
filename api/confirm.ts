@@ -34,13 +34,14 @@ export async function GET(request: Request) {
   }
 
   // Logic to update the user's subscription status in the database
-  const address = (decoded as any).address; // Extract email from decoded token
-  const frequency = (decoded as any).frequency; // Assuming frequency is part of the token payload
+  const address = (decoded as any).address;
+  const frequency = (decoded as any).frequency;
+  const enabled = (decoded as any).enabled;
 
   // Insert or update subscription details in Supabase
   const { data, error } = await supabase
     .from('report-email-recipients') // Replace with your actual table name
-    .upsert([{ address, frequency }], { onConflict: 'address' }); // Upsert based on email
+    .upsert([{ address, frequency, enabled }], { onConflict: 'address' }); // Upsert based on email
 
   if (error) {
     console.error('Error updating subscription:', error);
