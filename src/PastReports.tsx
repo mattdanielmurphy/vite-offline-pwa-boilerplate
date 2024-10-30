@@ -165,7 +165,7 @@ const labelStyle: React.CSSProperties = {
 	fontWeight: 'bold',
 	paddingRight: '10px',
 	verticalAlign: 'top',
-	width: '100px',
+	width: '80px',
 	textAlign: 'left',
 };
 

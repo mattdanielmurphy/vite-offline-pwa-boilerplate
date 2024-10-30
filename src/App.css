@@ -1,7 +1,6 @@
 #root {
 	max-width: 1280px;
 	margin: 0 auto;
-	padding: 2rem;
 	text-align: center;
 }
 
@@ -22,10 +21,15 @@
 	--border-color: #555555;
 }
 
+
 body {
 	background-color: var(--bg-color);
 	color: var(--text-color);
 	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+#details-input {
+	width: 342px;
 }
 
 input,
@@ -37,7 +41,6 @@ textarea {
 	border-radius: 10px;
 	font-size: 16px;
 	padding: 12px;
-	width: 100%;
 	box-sizing: border-box;
 }
 
@@ -79,9 +82,17 @@ button {
 
 	form {
 		background-color: transparent !important;
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: start;
+		column-gap: 20px;
+		row-gap: 20px;
 		border: 1px solid var(--border-color);
 		border-radius: 10px;
-		padding: 20px !important;
+		margin: 0 auto;
+		margin-bottom: 20px;
+		padding: 15px !important;
+		padding-top: 20px !important;
 	}
 
 	input,
@@ -118,38 +129,30 @@ button {
 	animation: spin 1s linear infinite;
 }
 
-/* Add these styles at the end of the file */
-
 .report-form {
 	max-width: 600px;
 	margin: 0 auto;
 }
 
-.form-group {
-	margin-bottom: 10px;
-	display: flex;
-	align-items: center;
-	justify-content: start;
-	width: 100%;
-	gap: 20px;
-}
-
-.form-group label {
+.form-group input,
+.form-group select {
 	width: 100px;
 }
 
-.form-group label[for='date-input'] {
-	width: 80px;
+.form-group label {
+	/* width: 60px; */
+	text-align: left;
+	padding-left: 5px;
 }
 
-.input-group {
-	display: flex;
-	align-items: center;
-	margin-bottom: 5px;
+.form-group label[for='date-input'] {
+	width: 60px;
 }
 
 #date-input {
 	margin-bottom: 0;
+	width: 118px !important;
+	text-align: center;
 }
 
 .today-indicator {
@@ -168,8 +171,13 @@ button {
 	margin-bottom: 10px;
 }
 
+.task-input input {
+	width: 100%;
+}
+
 .task-input input:first-of-type {
 	width: 150px;
+	text-align: center;
 }
 
 .secondary-button {
@@ -186,24 +194,14 @@ button {
 	margin-right: 10px;
 }
 
-#overtime-input {
-	margin-top: 10px;
-	zoom: 120%;
+.overtime-group {
+	text-align: left;
 }
 
-.overtime-hours {
-	display: flex;
-	align-items: center;
-	margin-left: 20px;
-}
-
-.overtime-hours label {
-	margin-right: 10px;
-}
-
-.overtime-hours input {
-	margin-top: 10px;
-	width: 60px;
+#overtime-hours-input {
+	width: 53px;
+	padding: 12px 8px;
+	text-align: center;
 }
 
 @media (max-width: 767px) {
@@ -215,7 +213,6 @@ button {
 .desktop-nav {
 	margin: 15px 0;
 	justify-content: center;
-	/* gap: 20px; */
 }
 
 .desktop-nav a {
@@ -233,6 +230,16 @@ button {
 }
 
 @media (min-width: 768px) {
+	.form-group {
+		display: flex;
+		align-items: center;
+		justify-content: start;
+	}
+
+	.form-group label {
+		width: 60px;
+	}
+
 	.desktop-nav {
 		display: flex !important;
 	}
@@ -246,30 +253,18 @@ button {
 	}
 }
 
-/* Add this class to the end of your App.css file */
 .delete-button {
 	background: none !important;
 	border: none;
-	/* No border */
 	width: 40px;
-	/* Adjust width to fit the icon */
 	height: 40px;
-	/* Adjust height for better alignment */
 	display: flex;
-	/* Flexbox for centering */
 	align-items: center;
-	/* Center vertically */
 	justify-content: center;
-	/* Center horizontally */
 	border-radius: 5px;
-	/* Optional: add border radius for styling */
 	cursor: pointer;
-	/* Pointer cursor on hover */
 	margin: 0;
-	/* Remove any margin that might affect alignment */
 	margin-top: -15px;
 	padding: 0;
-	/* Remove padding to ensure consistent size */
 	vertical-align: middle;
-	/* Align vertically with other elements */
 }

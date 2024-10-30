@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import DatePicker from 'react-datepicker';
 import { format, startOfDay, getHours, getMinutes, getDay, addHours, addDays, isAfter, isBefore, parseISO } from 'date-fns';
@@ -10,39 +10,39 @@ const defaultWeather = 'Rainy'; // Default weather
 // Schedule object to determine default names based on day and time
 const defaultSchedule = {
 	'1': { // Monday
-		'00:00': 'Marty',
-		'08:00': 'Jason',
-		'16:00': 'Colin',
+		'00:00': 'Marty Wanless',
+		'08:00': 'Jason Earle',
+		'16:00': 'Colin Butcher',
 	},
 	'2': { // Tuesday
-		'00:00': 'Terry',
-		'08:00': 'Jason',
-		'16:00': 'Colin',
+		'00:00': 'Terry MacLaine',
+		'08:00': 'Jason Earle',
+		'16:00': 'Colin Butcher',
 	},
 	'3': { // Wednesday
-		'00:00': 'Terry',
-		'08:00': 'Jason',
-		'16:00': 'Matthew',
+		'00:00': 'Terry MacLaine',
+		'08:00': 'Jason Earle',
+		'16:00': 'Matthew Murphy',
 	},
 	'4': { // Thursday
-		'00:00': 'Terry',
-		'08:00': 'Jason',
-		'16:00': 'Matthew',
+		'00:00': 'Terry MacLaine',
+		'08:00': 'Jason Earle',
+		'16:00': 'Matthew Murphy',
 	},
 	'5': { // Friday
-		'00:00': 'Terry',
-		'08:00': 'Jason',
-		'16:00': 'Matthew',
+		'00:00': 'Terry MacLaine',
+		'08:00': 'Jason Earle',
+		'16:00': 'Matthew Murphy',
 	},
 	'6': { // Saturday
-		'00:00': 'Marty',
-		'08:00': 'Manpreet',
-		'16:00': 'Matthew',
+		'00:00': 'Marty Wanless',
+		'08:00': 'Manpreet Kaury',
+		'16:00': 'Matthew Murphy',
 	},
 	'0': { // Sunday
-		'00:00': 'Marty',
-		'08:00': 'Manpreet',
-		'16:00': 'Matthew',
+		'00:00': 'Marty Wanless',
+		'08:00': 'Manpreet Kaury',
+		'16:00': 'Matthew Murphy',
 	},
 };
 
@@ -59,6 +59,8 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 	const [otherName, setOtherName] = useState<string>('');
 	const [otherWeather, setOtherWeather] = useState<string>('');
 	const [isUserChangingDate, setIsUserChangingDate] = useState<boolean>(false); // Track user-initiated date changes
+	const [nameSelectWidth, setNameSelectWidth] = useState('100%');
+	const otherNameInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		// Set the initial task time to the determined default timeIn value
@@ -66,6 +68,10 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 			setTasks([{ time: timeIn, description: '' }]);
 		}
 	}, [timeIn]); // Run when timeIn changes
+
+	useEffect(() => { // Focus to Other name input box if "Other" name selected
+		nameSelectWidth !== "100%" && otherNameInputRef?.current?.focus()
+	}, [nameSelectWidth])
 
 	const determineTimeAndName = (currentDate: Date, earlyNightStart?: Date) => {
 		const hours = getHours(currentDate);
@@ -102,6 +108,8 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 		const scheduleForDay = defaultSchedule[dayOfWeek];
 		if (scheduleForDay && currentTime) {
 			// Use currentTime to set the name directly
+			console.log('setname', scheduleForDay[selectedTimeIn]);
+
 			setName(scheduleForDay[selectedTimeIn]);
 		}
 
@@ -182,7 +190,7 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 					time_out: timeOut,
 					details,
 					tasks: filteredTasks.length > 0 ? JSON.stringify(filteredTasks) : null, // Only include if there are tasks
-					is_overtime: overtime,
+					is_overtime: overtimeHours > 0,
 					overtime_hours: overtime ? overtimeHours : 0,
 					total_hours: hoursWorked
 				}
@@ -231,6 +239,15 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 		return Number((totalMinutes / 60).toFixed(2));
 	};
 
+	const handleNameChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		setName(e.target.value)
+		if (e.target.value === 'Other') {
+			setNameSelectWidth('83px')
+		} else {
+			setNameSelectWidth('100%');
+		}
+	}
+
 	useEffect(() => {
 		const hours = calculateHours(timeIn, timeOut);
 		if (overtime && hours > 8) {
@@ -253,27 +270,44 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 					/>
 				</div>
 
+				<div className="form-group overtime-group">
+					<label htmlFor="overtime-hours-input">Overtime Hours</label>
+					<input
+						id="overtime-hours-input"
+						type="number"
+						value={overtimeHours}
+						onChange={(e) => setOvertimeHours(parseFloat(e.target.value))}
+						min="0"
+						step="1"
+					/>
+				</div>
+
 				<div className="form-group">
 					<label htmlFor="name-input">Name</label>
 					<select
 						id="name-input"
 						value={name}
-						onChange={(e) => setName(e.target.value)}
+						onChange={handleNameChange}
+						style={{ width: nameSelectWidth }}
 					>
 						<option value="">Select a name</option>
-						{['Manpreet', 'Colin', 'Matthew', 'Jason', 'Terry', 'Marty', 'Other'].map((option) => (
+						{['Manpreet Kaury', 'Colin Butcher', 'Matthew Murphy', 'Jason Earle', 'Terry MacLaine', 'Marty Wanless', 'Other'].map((option) => (
 							<option key={option} value={option}>{option}</option>
 						))}
 					</select>
-					{name === 'Other' && (
+				</div>
+				{name === 'Other' && (
+					<div className="form-group">
+						<label htmlFor="name-input">Name</label>
 						<input
 							type="text"
 							value={otherName}
+							ref={otherNameInputRef}
 							onChange={(e) => setOtherName(e.target.value)}
 							placeholder="Enter name"
 						/>
-					)}
-				</div>
+					</ div>
+				)}
 
 				<div className="form-group">
 					<label htmlFor="weather-input">Weather</label>
@@ -349,31 +383,9 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 					))}
 					<button type="button" onClick={addTask} className="secondary-button">Add Task</button>
 				</div>
-
-				<div className="form-group checkbox-group">
-					<label htmlFor="overtime-input">Overtime?</label>
-					<input
-						id="overtime-input"
-						type="checkbox"
-						checked={overtime}
-						onChange={(e) => setOvertime(e.target.checked)}
-					/>
-					{overtime && (
-						<div className="overtime-hours">
-							<label htmlFor="overtime-hours-input">Hours:</label>
-							<input
-								id="overtime-hours-input"
-								type="number"
-								value={overtimeHours}
-								onChange={(e) => setOvertimeHours(parseFloat(e.target.value))}
-								min="0"
-								step="1"
-							/>
-						</div>
-					)}
+				<div style={{ width: '100%', margin: 20 }}>
+					<button type="submit">Submit</button>
 				</div>
-
-				<button type="submit">Submit</button>
 			</form>
 		</div>
 	);
