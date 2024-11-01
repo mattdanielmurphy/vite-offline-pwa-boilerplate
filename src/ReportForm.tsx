@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from './supabaseClient';
-import DatePicker from 'react-datepicker';
-import { format, startOfDay, getHours, getMinutes, getDay, addHours, addDays, isAfter, isBefore, parseISO } from 'date-fns';
 import 'react-datepicker/dist/react-datepicker.css'; // Import the CSS for the date picker
 import "./App.css"
 
-const defaultWeather = 'Rainy'; // Default weather
+import React, { useEffect, useRef, useState } from 'react';
+import { addDays, addHours, format, getDay, getHours, getMinutes, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
+
+import ConfirmationModal from './components/ConfirmationModal';
+import DatePicker from 'react-datepicker';
+import { supabase } from './supabaseClient';
+
+const defaultWeather = 'Cloudy'; // Default weather
 
 // Schedule object to determine default names based on day and time
 const defaultSchedule = {
@@ -36,20 +39,42 @@ const defaultSchedule = {
 	},
 	'6': { // Saturday
 		'00:00': 'Marty Wanless',
-		'08:00': 'Manpreet Kaury',
+		'08:00': 'Manpreet Kaur',
 		'16:00': 'Matthew Murphy',
 	},
 	'0': { // Sunday
 		'00:00': 'Marty Wanless',
-		'08:00': 'Manpreet Kaury',
+		'08:00': 'Manpreet Kaur',
 		'16:00': 'Matthew Murphy',
 	},
+};
+
+// Add this after the defaultSchedule object and before the ReportForm component
+const vancouverWeather = {
+	January: "Rainy",
+	February: "Rainy",
+	March: "Rainy",
+	April: "Cloudy",
+	May: "Cloudy",
+	June: "Sunny",
+	July: "Sunny",
+	August: "Sunny",
+	September: "Cloudy",
+	October: "Rainy",
+	November: "Rainy",
+	December: "Rainy"
+};
+
+// Update the defaultWeather constant to be a function
+const getDefaultWeather = () => {
+	const month = new Date().toLocaleString('default', { month: 'long' });
+	return vancouverWeather[month as keyof typeof vancouverWeather];
 };
 
 const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }) => {
 	const [date, setDate] = useState<Date | null>(new Date()); // for testing replace with e.g.: new Date(`2024-10-27T08:30`)
 	const [name, setName] = useState<string>(''); // Default name
-	const [weather, setWeather] = useState<string>(defaultWeather); // Default weather
+	const [weather, setWeather] = useState<string>(getDefaultWeather()); // Default weather
 	const [timeIn, setTimeIn] = useState<string>('');
 	const [timeOut, setTimeOut] = useState<string>('');
 	const [details, setDetails] = useState<string>('');
@@ -61,10 +86,102 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 	const [isUserChangingDate, setIsUserChangingDate] = useState<boolean>(false); // Track user-initiated date changes
 	const [nameSelectWidth, setNameSelectWidth] = useState('100%');
 	const otherNameInputRef = useRef<HTMLInputElement>(null);
+	const [showOvertimeModal, setShowOvertimeModal] = useState(false);
+	const [isOvertimeHighlighted, setIsOvertimeHighlighted] = useState(false);
+
+	// Track which fields have been manually set
+	const [userModifiedFields, setUserModifiedFields] = useState({
+		timeIn: false,
+		timeOut: false,
+		name: false
+	});
+
+	// Add new state to track if overtime was auto-set
+	const [isOvertimeAutoSet, setIsOvertimeAutoSet] = useState(false);
+
+	// Helper function to update a field and mark it as user-modified
+	const handleFieldChange = (field: keyof typeof userModifiedFields, value: string) => {
+		switch(field) {
+			case 'timeIn':
+				setTimeIn(value);
+				break;
+			case 'timeOut':
+				setTimeOut(value);
+				break;
+			case 'name':
+				setName(value);
+				if (value === 'Other') {
+					setNameSelectWidth('83px');
+				} else {
+					setNameSelectWidth('100%');
+				}
+				break;
+		}
+		setUserModifiedFields(prev => ({ ...prev, [field]: true }));
+	};
+
+	const initializeFormDefaults = () => {
+		if (date) {
+			let currentDate = new Date();
+			const hours = getHours(currentDate);
+			const minutes = getMinutes(currentDate);
+			const currentTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+			const currentDateTime = new Date(`1970-01-01T${currentTime}`);
+			const earlyNightStart = parseISO('1970-01-01T23:30');
+			
+			if (isAfter(currentDateTime, earlyNightStart)) {
+				currentDate = addDays(currentDate, 1);
+				determineTimeAndName(currentDate, earlyNightStart);
+				setDate(currentDate);
+				setIsUserChangingDate(false);
+			} else {
+				determineTimeAndName(currentDate, earlyNightStart);
+			}
+		}
+	};
+
+	// Initial mount effect
+	useEffect(() => {
+		const hasCachedValues = localStorage.getItem('reportDate') && 
+							   localStorage.getItem('reportTimeIn') && 
+							   localStorage.getItem('reportTimeOut') && 
+							   localStorage.getItem('reportName');
+		
+		if (hasCachedValues) {
+			// Load cached values
+			setDate(new Date(localStorage.getItem('reportDate')!));
+			setTimeIn(localStorage.getItem('reportTimeIn')!);
+			setTimeOut(localStorage.getItem('reportTimeOut')!);
+			setName(localStorage.getItem('reportName')!);
+			setWeather(localStorage.getItem('reportWeather') || getDefaultWeather());
+			setDetails(localStorage.getItem('reportDetails') || '');
+			setTasks(JSON.parse(localStorage.getItem('reportTasks') || '[]') || [{ time: '', description: '' }]);
+			setOvertimeHours(Number(localStorage.getItem('reportOvertimeHours')) || 0);
+			setOtherName(localStorage.getItem('reportOtherName') || '');
+			setOtherWeather(localStorage.getItem('reportOtherWeather') || '');
+		} else {
+			initializeFormDefaults();
+		}
+	}, []);
+
+	// Save all values when they change
+	useEffect(() => {
+		// Always save current values, even if empty
+		if (date) localStorage.setItem('reportDate', date.toISOString());
+		localStorage.setItem('reportTimeIn', timeIn);
+		localStorage.setItem('reportTimeOut', timeOut);
+		localStorage.setItem('reportName', name);
+		localStorage.setItem('reportWeather', weather);
+		localStorage.setItem('reportDetails', details);
+		localStorage.setItem('reportTasks', JSON.stringify(tasks));
+		localStorage.setItem('reportOvertimeHours', overtimeHours.toString());
+		localStorage.setItem('reportOtherName', otherName);
+		localStorage.setItem('reportOtherWeather', otherWeather);
+	}, [date, timeIn, timeOut, name, weather, details, tasks, overtime, overtimeHours, otherName, otherWeather]);
 
 	useEffect(() => {
 		// Set the initial task time to the determined default timeIn value
-		if (timeIn && tasks[0].time === '') {
+		if (timeIn) {
 			setTasks([{ time: timeIn, description: '' }]);
 		}
 	}, [timeIn]); // Run when timeIn changes
@@ -73,45 +190,41 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 		nameSelectWidth !== "100%" && otherNameInputRef?.current?.focus()
 	}, [nameSelectWidth])
 
+	// Move determineTimeIn out to component scope
+	const determineTimeIn = (currentTime: string) => {
+		const currentDateTime = new Date(`1970-01-01T${currentTime}`);
+		// Define the time ranges
+		const timeIn16 = parseISO('1970-01-01T16:00');
+		const nightEnd = parseISO('1970-01-01T07:45');
+		const morningStart = parseISO('1970-01-01T07:44');
+		const earlyNightStart = parseISO('1970-01-01T23:30');
+
+		// Determine timeIn based on current time
+		if (isAfter(currentDateTime, earlyNightStart)) {
+			return '00:00';
+		} else if (isBefore(currentDateTime, nightEnd)) {
+			return '00:00';
+		} else if (isAfter(currentDateTime, morningStart) && isBefore(currentDateTime, timeIn16)) {
+			return '08:00';
+		} else {
+			return '16:00';
+		}
+	};
+
 	const determineTimeAndName = (currentDate: Date, earlyNightStart?: Date) => {
 		const hours = getHours(currentDate);
 		const minutes = getMinutes(currentDate);
 		const currentTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
-		// Determine timeIn
-		const determineTimeIn = (currentTime: string) => {
-			const currentDateTime = new Date(`1970-01-01T${currentTime}`); // Use currentTime for comparison
-			// Define the time ranges
-			const timeIn16 = parseISO('1970-01-01T16:00'); // 16:00
-			const nightEnd = parseISO('1970-01-01T07:45'); // 07:45
-			const morningStart = parseISO('1970-01-01T07:44'); // 07:44
-
-			console.log(currentDateTime, isAfter(currentDateTime, earlyNightStart!));
-
-			// Determine timeIn based on current time
-			if (earlyNightStart !== undefined && isAfter(currentDateTime, earlyNightStart)) {
-				return '00:00'; // Set timeIn to 00:00
-			} else if (isBefore(currentDateTime, nightEnd)) {
-				return '00:00'; // Set timeIn to 00:00
-			} else if (isAfter(currentDateTime, morningStart) && isBefore(currentDateTime, timeIn16)) {
-				return '08:00'; // Set timeIn to 08:00
-			} else {
-				return '16:00'; // Set timeIn to 16:00
-			}
-		};
-
 		const selectedTimeIn = determineTimeIn(currentTime);
+		console.log('selectedTimeIn', selectedTimeIn);
 		setTimeIn(selectedTimeIn);
 
 		// Determine the default name based on the schedule
-		const dayOfWeek = getDay(currentDate).toString() as keyof typeof defaultSchedule; // Cast to the correct type
+		const dayOfWeek = getDay(currentDate).toString() as keyof typeof defaultSchedule;
 		const scheduleForDay = defaultSchedule[dayOfWeek];
-		if (scheduleForDay && currentTime) {
-			// Use currentTime to set the name directly
-			console.log('setname', scheduleForDay[selectedTimeIn]);
-
-			setName(scheduleForDay[selectedTimeIn]);
-		}
+		console.log('scheduleForDay', scheduleForDay);
+		setName(scheduleForDay![selectedTimeIn!]);
 
 		// Set timeOut to 8 hours after timeIn
 		const timeInDate = new Date(`1970-01-01T${selectedTimeIn}`);
@@ -121,38 +234,38 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 	};
 
 	useEffect(() => {
-		// Initial setup for date
-		if (date) {
-			let currentDate = date;
-			const hours = getHours(currentDate);
-			const minutes = getMinutes(currentDate);
-			const currentTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-			const currentDateTime = new Date(`1970-01-01T${currentTime}`); // Use currentTime for comparison
-			const earlyNightStart = parseISO('1970-01-01T23:30'); // 23:30
-			if (isAfter(currentDateTime, earlyNightStart)) {
-				currentDate = addDays(date, 1);
-				determineTimeAndName(currentDate, earlyNightStart);
-				setDate(currentDate); // Change the state of 'date' to tomorrow
-				// Reset user change flag since this is a programmatic change
-				setIsUserChangingDate(false);
-			} else {
-				determineTimeAndName(date, earlyNightStart);
+		// This effect will run when 'date' changes
+		if (isUserChangingDate && date) {
+			const fieldsSetBeforeDateChange = { ...userModifiedFields };
+			
+			// Only update values that weren't manually set BEFORE the date change
+			if (!fieldsSetBeforeDateChange.timeIn) {
+				const hours = getHours(date);
+				const minutes = getMinutes(date);
+				const currentTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+				const selectedTimeIn = determineTimeIn(currentTime);
+				setTimeIn(selectedTimeIn);
+
+				// Only set timeOut if it hasn't been modified
+				if (!fieldsSetBeforeDateChange.timeOut) {
+					const timeInDate = new Date(`1970-01-01T${selectedTimeIn}`);
+					const timeOutDate = addHours(timeInDate, 8);
+					setTimeOut(timeOutDate.toTimeString().slice(0, 5));
+				}
+			}
+
+			// Only update name if it hasn't been modified
+			if (!fieldsSetBeforeDateChange.name) {
+				const dayOfWeek = getDay(date).toString() as keyof typeof defaultSchedule;
+				const scheduleForDay = defaultSchedule[dayOfWeek];
+				setName(scheduleForDay![timeIn]);
 			}
 		}
-	}, []); // Run only once on mount
+	}, [date]);  // Only depend on date changes, not userModifiedFields
 
-	useEffect(() => {
-		// This effect will run when 'date' changes
-		if (isUserChangingDate && date) { // Check if the change was user-initiated
-			determineTimeAndName(date);
-		}
-	}, [date]); // Run when 'date' changes
-
-	const handleDateChange = (date: Date | null) => {
-		if (date) {
-			setDate(startOfDay(date)); // Set to start of the day
-			setIsUserChangingDate(true); // Mark as user-initiated change
-		}
+	const handleDateChange = (newDate: Date | null) => {
+		setIsUserChangingDate(true);
+		setDate(newDate);
 	};
 
 	const submitReport = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -171,8 +284,8 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 		const hoursWorked = calculateHours(timeIn, timeOut);
 
 		// Alert if overtime is unchecked but hours worked exceed 8
-		if (!overtime && hoursWorked > 8) {
-			alert("You have worked more than 8 hours. Please check the overtime box if applicable.");
+		if (!overtimeHours && hoursWorked > 8) {
+			setShowOvertimeModal(true);
 			return;
 		}
 
@@ -191,30 +304,39 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 					details,
 					tasks: filteredTasks.length > 0 ? JSON.stringify(filteredTasks) : null, // Only include if there are tasks
 					is_overtime: overtimeHours > 0,
-					overtime_hours: overtime ? overtimeHours : 0,
+					overtime_hours: overtimeHours,
 					total_hours: hoursWorked
 				}
 			]);
 
-		if (error) {
+		if (!error) {
+			// Clear cache
+			localStorage.removeItem('reportDate');
+			localStorage.removeItem('reportTimeIn');
+			localStorage.removeItem('reportTimeOut');
+			localStorage.removeItem('reportName');
+			localStorage.removeItem('reportWeather');
+			localStorage.removeItem('reportDetails');
+			localStorage.removeItem('reportTasks');
+			localStorage.removeItem('reportOvertimeHours');
+			localStorage.removeItem('reportOtherName');
+			localStorage.removeItem('reportOtherWeather');
+			
+			// Reset user modified fields
+			setUserModifiedFields({
+				timeIn: false,
+				timeOut: false,
+				name: false
+			});
+			
+			// Reinitialize with defaults
+			initializeFormDefaults();
+			
+			alert('Report submitted successfully!');
+			onReportSubmit();
+		} else {
 			console.error('Error inserting report:', error);
 			alert('Failed to submit report. Please try again.');
-		} else {
-			alert('Report submitted successfully!');
-			// Call the onReportSubmit callback
-			onReportSubmit();
-			// Reset form
-			setDate(new Date());
-			setName('');
-			setWeather(defaultWeather); // Reset to default weather
-			setTimeIn('');
-			setTimeOut('');
-			setDetails('');
-			setTasks([{ time: '', description: '' }]); // Reset to initial state
-			setOvertime(false);
-			setOvertimeHours(0);
-			setOtherName('');
-			setOtherWeather('');
 		}
 	};
 
@@ -239,19 +361,20 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 		return Number((totalMinutes / 60).toFixed(2));
 	};
 
-	const handleNameChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-		setName(e.target.value)
-		if (e.target.value === 'Other') {
-			setNameSelectWidth('83px')
-		} else {
-			setNameSelectWidth('100%');
-		}
-	}
-
 	useEffect(() => {
 		const hours = calculateHours(timeIn, timeOut);
-		if (overtime && hours > 8) {
-			setOvertimeHours(hours - 8);
+		if (hours > 8) {
+			// Round up to nearest 0.1 hours
+			const overtimeAmount = Math.ceil((hours - 8) * 10) / 10;
+			setOvertimeHours(overtimeAmount);
+			setIsOvertimeHighlighted(true);
+			setIsOvertimeAutoSet(true);
+			// Clear highlight after 3 seconds
+			setTimeout(() => setIsOvertimeHighlighted(false), 3000);
+		} else {
+			setOvertimeHours(0);
+			setIsOvertimeHighlighted(false);
+			setIsOvertimeAutoSet(false);
 		}
 	}, [timeIn, timeOut, overtime]);
 
@@ -276,9 +399,18 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 						id="overtime-hours-input"
 						type="number"
 						value={overtimeHours}
-						onChange={(e) => setOvertimeHours(parseFloat(e.target.value))}
+						onChange={(e) => {
+							setOvertimeHours(parseFloat(e.target.value));
+							setIsOvertimeHighlighted(false);
+							setIsOvertimeAutoSet(false);  // Clear auto-set state on manual change
+						}}
 						min="0"
-						step="1"
+						step="0.25"
+						style={{
+							backgroundColor: isOvertimeHighlighted ? '#fff3cd' : 'var(--input-bg-color)',
+							borderColor: isOvertimeAutoSet ? '#ffc107' : 'var(--border-color)',
+							transition: 'background-color 0.3s ease, border-color 0.3s ease'
+						}}
 					/>
 				</div>
 
@@ -287,11 +419,11 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 					<select
 						id="name-input"
 						value={name}
-						onChange={handleNameChange}
+						onChange={(e) => handleFieldChange('name', e.target.value)}
 						style={{ width: nameSelectWidth }}
 					>
 						<option value="">Select a name</option>
-						{['Manpreet Kaury', 'Colin Butcher', 'Matthew Murphy', 'Jason Earle', 'Terry MacLaine', 'Marty Wanless', 'Other'].map((option) => (
+						{['Manpreet Kaur', 'Colin Butcher', 'Matthew Murphy', 'Jason Earle', 'Terry MacLaine', 'Marty Wanless', 'Other'].map((option) => (
 							<option key={option} value={option}>{option}</option>
 						))}
 					</select>
@@ -317,10 +449,10 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 						onChange={(e) => setWeather(e.target.value)}
 					>
 						<option value="Rainy">Rainy</option>
-						<option value="Sunny">Sunny</option>
 						<option value="Cloudy">Cloudy</option>
-						<option value="Snowy">Snowy</option>
+						<option value="Sunny">Sunny</option>
 						<option value="Windy">Windy</option>
+						<option value="Snowy">Snowy</option>
 						<option value="Other">Other</option>
 					</select>
 				</div>
@@ -331,7 +463,7 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 						id="time-in-input"
 						type="time"
 						value={timeIn}
-						onChange={(e) => setTimeIn(e.target.value)}
+						onChange={(e) => handleFieldChange('timeIn', e.target.value)}
 					/>
 				</div>
 
@@ -341,7 +473,7 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 						id="time-out-input"
 						type="time"
 						value={timeOut}
-						onChange={(e) => setTimeOut(e.target.value)}
+						onChange={(e) => handleFieldChange('timeOut', e.target.value)}
 					/>
 				</div>
 
@@ -356,7 +488,7 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 				</div>
 
 				<div className="form-group" id="tasks-container">
-					<h3>Tasks</h3>
+					<h2>Tasks</h2>
 					{tasks.map((task, index) => (
 						<div key={index} className="task-input">
 							<input
@@ -387,6 +519,21 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 					<button type="submit">Submit</button>
 				</div>
 			</form>
+
+			<ConfirmationModal
+				isOpen={showOvertimeModal}
+				title="Overtime Warning"
+				message="You have worked more than 8 hours. Did you forget to add overtime hours?"
+				confirmText="Proceed as is"
+				cancelText="Go back and add overtime hours"
+				onConfirm={async () => {
+					setShowOvertimeModal(false);
+					onReportSubmit();
+				}}
+				onCancel={() => {
+					setShowOvertimeModal(false);
+				}}
+			/>
 		</div>
 	);
 };
