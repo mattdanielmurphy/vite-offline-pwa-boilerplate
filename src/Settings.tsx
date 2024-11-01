@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { FaTrashAlt } from 'react-icons/fa';
+import { FaChevronDown, FaSpinner, FaTrashAlt } from 'react-icons/fa';
+import React, { useEffect, useState } from 'react';
+
 import { supabase } from './supabaseClient';
 
 interface EmailSetting {
@@ -15,6 +16,9 @@ const Settings: React.FC = () => {
   const [changesMade, setChangesMade] = useState<boolean>(false); // Track if changes are made
   const [loading, setLoading] = useState<boolean>(false); // Loading state
   const [fetching, setFetching] = useState<boolean>(false); // New loading state for fetching
+
+  // Add new state to track which email is expanded
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchEmailSettings = async () => {
@@ -107,61 +111,176 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
+      {/* Add overlay when loading */}
+      {loading && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.2)',
+          zIndex: 1000
+        }} />
+      )}
+      
       <h2>Settings</h2>
-      {fetching && <div>Loading email settings...</div>} {/* Display loading indicator for fetching */}
-      {notification && <div style={{ color: 'orange' }}>{notification}</div>} {/* Display notification */}
-      <form>
+      {fetching && <div>Loading email settings...</div>}
+      {notification && <div style={{ color: 'orange' }}>{notification}</div>}
+      <form style={{ 
+        display: 'block',
+        maxWidth: '414px',
+        margin: '0 auto',
+        position: 'relative', // For proper overlay stacking
+        backgroundColor: 'var(--bg-color)' // Match the page background
+      }}>
         <h3>Scheduled Email Reports</h3>
         {emailSettings.map((setting, index) => (
-          <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-            <input
-              type="checkbox"
-              checked={setting.enabled}
-              onChange={() => handleToggle(index)}
-              style={{ width: '20px', height: '20px', marginRight: '10px' }}
-            />
-            <input
-              type="email"
-              value={setting.address}
-              onChange={(e) => handleEmailChange(index, e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault(); // Prevent form submission
-                  handleSaveChanges(); // Call save changes function
-                }
+          <div key={index} style={{ marginBottom: '10px' }}>
+            {/* Main row: Email and delete button */}
+            <div 
+              style={{ 
+                display: 'flex', 
+                padding: '8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                border: '1px solid var(--input-bg-color)',
+                minHeight: '40px',
+                backgroundColor: 'var(--bg-color)' // Match the page background
               }}
-              placeholder="email@example.com" // Placeholder text
-              style={{ marginRight: '10px'}}
-              required
-            />
-            <select
-              value={setting.frequency}
-              onChange={(e) => handleFrequencyChange(index, e.target.value)}
-              style={{ marginRight: '10px', width: '100px' }}
             >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-            <button 
-              type="button" 
-              onClick={() => handleDeleteEmail(index)} 
-              className="delete-button" // Use the new class
-            >
-              <FaTrashAlt size={18} /> {/* Increase icon size */}
-            </button>
+              <div 
+                onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
+                style={{ 
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  width: 0,
+                  minWidth: 0
+                }}
+              >
+                <span style={{ 
+                  flex: 1, 
+                  textAlign: 'left',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '300px'
+                }}>
+                  {setting.address || 'email@example.com'}
+                </span>
+                <FaChevronDown 
+                  style={{ 
+                    transform: expandedIndex === index ? 'rotate(180deg)' : 'rotate(0)',
+                    transition: 'transform 0.2s ease',
+                    flexShrink: 0
+                  }}
+                />
+              </div>
+              <button 
+                type="button" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteEmail(index);
+                }} 
+                className="delete-button"
+                style={{ color: 'var(--text-color)' }}
+              >
+                <FaTrashAlt size={18} />
+              </button>
+            </div>
+
+            {/* Expandable settings panel */}
+            {expandedIndex === index && (
+              <div style={{ 
+                padding: '12px',
+                marginTop: '4px',
+                backgroundColor: 'var(--bg-color)', // Match the page background
+                borderRadius: '4px'
+              }}>
+                <input
+                  type="email"
+                  value={setting.address}
+                  onChange={(e) => handleEmailChange(index, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveChanges();
+                    }
+                  }}
+                  placeholder="email@example.com"
+                  style={{ 
+                    width: 'calc(100% - 24px)', // Account for padding
+                    marginBottom: '8px'
+                  }}
+                  required
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input
+                      type="checkbox"
+                      checked={setting.enabled}
+                      onChange={() => handleToggle(index)}
+                      style={{ width: '20px', height: '20px' }}
+                    />
+                    Enabled
+                  </label>
+                  <select
+                    value={setting.frequency}
+                    onChange={(e) => handleFrequencyChange(index, e.target.value)}
+                    style={{ marginLeft: 'auto' }}
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
         ))}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          {changesMade && ( // Show Save Changes button only if changes are made
-            <button type="button" onClick={handleSaveChanges} disabled={loading}>
-              {loading ? 'Saving...' : 'Save Changes'} {/* Show loading text */}
+        
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '10px', 
+          marginTop: '20px',
+          width: '100%'
+        }}>
+          {changesMade && (
+            <button 
+              type="button" 
+              onClick={handleSaveChanges} 
+              disabled={loading}
+              style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                zIndex: 1001 // Ensure form stays above overlay
+              }}
+            >
+              {loading ? (
+                <>
+                  <FaSpinner className="spinner" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
             </button>
           )}
-          <button type="button" onClick={handleAddEmail} className="secondary-button" style={{ marginLeft: '10px' }}>Add Email</button> {/* Add button */}
+          <button 
+            type="button" 
+            onClick={handleAddEmail} 
+            className="secondary-button"
+            disabled={loading}
+          >
+            Add Email
+          </button>
         </div>
-        {loading && <div>Loading...</div>} {/* Display loading animation/message */}
       </form>
     </div>
   );

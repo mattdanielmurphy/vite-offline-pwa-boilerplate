@@ -1,10 +1,10 @@
+import { FaSpinner } from 'react-icons/fa';
 import React from 'react';
 import { Report } from './interfaces/Report';
-import { FaSpinner } from 'react-icons/fa';
 
 const PastReports: React.FC<{ reports: Report[], loading: boolean, onRefresh: () => void }> = ({ reports, loading, onRefresh }) => {
 	return (
-		<div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 20px' }}>
+		<div style={{ maxWidth: '800px', margin: '0 auto' }}>
 			<button onClick={onRefresh} className="secondary-button">
 				Refresh Data
 			</button>
