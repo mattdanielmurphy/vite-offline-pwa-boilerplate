@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { supabase } from './supabaseClient';
-import { HoursTableReport } from './interfaces/Report';
+import React, { useCallback, useEffect, useState } from 'react';
+
 import { FaSpinner } from 'react-icons/fa';
+import { HoursTableReport } from './interfaces/Report';
+import { supabase } from './supabaseClient';
 
 interface DailyHourEntry {
 	regular: string;
@@ -40,7 +41,7 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 
 		reports.forEach(report => {
 			const { date, name, time_in, time_out, is_overtime, overtime_hours } = report;
-			const formattedDate = new Date(date).toISOString().split('T')[0];
+			const formattedDate = new Date(date).toISOString().split('T')[0].slice(5);
 			const month = new Date(date).toLocaleString('default', { month: 'long', year: 'numeric' });
 
 			if (!hours[month]) {
@@ -89,80 +90,107 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 		}
 	}, [reports]);
 
+	const calculateMonthlyTotals = (month: string) => {
+		const monthlyTotals: TotalHours = {};
+		const monthlyOvertime: { [name: string]: boolean } = {};
+		
+		Object.keys(dailyHours[month]).forEach(date => {
+			Object.keys(dailyHours[month][date]).forEach(name => {
+				if (!monthlyTotals[name]) {
+					monthlyTotals[name] = { regular: 0, overtime: 0 };
+				}
+				
+				const hours = dailyHours[month][date][name];
+				monthlyTotals[name].regular += parseFloat(hours.regular) || 0;
+				const overtime = parseFloat(hours.overtime) || 0;
+				monthlyTotals[name].overtime += overtime;
+				
+				if (overtime > 0) {
+					monthlyOvertime[name] = true;
+				}
+			});
+		});
+		
+		return { totals: monthlyTotals, hasOvertime: monthlyOvertime };
+	};
+
 	return (
-		<div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 20px' }}>
+		<div className="page-container">
 			<button onClick={onRefresh} className="secondary-button">
 				Refresh Data
 			</button>
 			<h1>Hours Worked</h1>
 			{loading ? (
-				<div style={{ textAlign: 'center', padding: '20px' }}>
+				<div className="loading-spinner">
 					<FaSpinner className="spinner" />
 				</div>
 			) : (
-				<>
-					{Object.keys(dailyHours).map((month: string) => (
-						<div key={month}>
-							<h2>{month}</h2>
-							<table style={{ width: '100%', borderCollapse: 'collapse' }}>
-								<thead style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: 'var(--report-bg-color)' }}>
-									<tr>
-										<th style={headerCellStyle}>Date</th>
-										{names.map(name => (
-											<React.Fragment key={name}>
-												<th style={headerCellStyle} colSpan={hasOvertime[name] ? 2 : 1}>{name}</th>
-											</React.Fragment>
-										))}
-									</tr>
-									<tr>
-										<th style={subHeaderCellStyle}></th>
-										{names.map(name => (
-											<React.Fragment key={`subheader-${name}`}>
-												<th style={subHeaderCellStyle}>Reg</th>
-												{hasOvertime[name] && <th style={subHeaderCellStyle}>OT</th>}
-											</React.Fragment>
-										))}
-									</tr>
-								</thead>
-								<tbody>
-									{Object.keys(dailyHours[month]).map(date => (
-										<tr key={date}>
-											<td style={cellStyle}>{date}</td>
+				<div className="table-container">
+					{Object.keys(dailyHours).map((month: string) => {
+						const { totals: monthlyTotals, hasOvertime: monthlyOvertime } = calculateMonthlyTotals(month);
+						return (
+							<div key={month} className="month-section">
+								<h2>{month}</h2>
+								<table className="hours-table">
+									<thead>
+										<tr>
+											<th className="header-cell">Date</th>
 											{names.map(name => (
-												<React.Fragment key={`${date}-${name}`}>
-													<td style={cellStyle}>
-														{(dailyHours[month][date]?.[name] as DailyHourEntry)?.regular || '-'}
-													</td>
-													{hasOvertime[name] && (
-														<td style={cellStyle}>
-															{(dailyHours[month][date]?.[name] as DailyHourEntry)?.overtime !== '0' ?
-																(dailyHours[month][date]?.[name] as DailyHourEntry)?.overtime : '-'}
-														</td>
-													)}
+												<React.Fragment key={name}>
+													<th className="header-cell" colSpan={monthlyOvertime[name] ? 2 : 1}>{name}</th>
 												</React.Fragment>
 											))}
 										</tr>
-									))}
-									<tr>
-										<td style={totalCellStyle}>Total Hours</td>
-										{names.map(name => (
-											<React.Fragment key={`total-${name}`}>
-												<td style={totalCellStyle}>
-													{formatHours(totalHours[name]?.regular || 0)}
-												</td>
-												{hasOvertime[name] && (
-													<td style={totalCellStyle}>
-														{formatHours(totalHours[name]?.overtime || 0)} OT
-													</td>
-												)}
-											</React.Fragment>
+										<tr>
+											<th className="sub-header-cell"></th>
+											{names.map(name => (
+												<React.Fragment key={`subheader-${name}`}>
+													<th className="sub-header-cell">Reg</th>
+													{monthlyOvertime[name] && <th className="sub-header-cell">OT</th>}
+												</React.Fragment>
+											))}
+										</tr>
+									</thead>
+									<tbody>
+										{Object.keys(dailyHours[month]).map(date => (
+											<tr key={date}>
+												<td className="table-cell">{date}</td>
+												{names.map(name => (
+													<React.Fragment key={`${date}-${name}`}>
+														<td className="table-cell">
+															{(dailyHours[month][date]?.[name] as DailyHourEntry)?.regular || '-'}
+														</td>
+														{monthlyOvertime[name] && (
+															<td className="table-cell">
+																{(dailyHours[month][date]?.[name] as DailyHourEntry)?.overtime !== '0' ?
+																	(dailyHours[month][date]?.[name] as DailyHourEntry)?.overtime : '-'}
+															</td>
+														)}
+													</React.Fragment>
+												))}
+											</tr>
 										))}
-									</tr>
-								</tbody>
-							</table>
-						</div>
-					))}
-				</>
+										<tr>
+											<td className="total-cell">Monthly Total</td>
+											{names.map(name => (
+												<React.Fragment key={`monthly-total-${name}`}>
+													<td className="total-cell">
+														{formatHours(monthlyTotals[name]?.regular || 0)}
+													</td>
+													{monthlyOvertime[name] && (
+														<td className="total-cell">
+															{formatHours(monthlyTotals[name]?.overtime || 0)} OT
+														</td>
+													)}
+												</React.Fragment>
+												))}
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						);
+					})}
+				</div>
 			)}
 		</div>
 	);
@@ -185,34 +213,6 @@ const formatHours = (hours: number): string => {
 	const wholeHours = Math.floor(hours);
 	const minutes = Math.round((hours - wholeHours) * 60);
 	return minutes === 0 ? `${wholeHours}` : `${wholeHours}.${minutes.toString().padStart(2, '0')}`;
-};
-
-const headerCellStyle: React.CSSProperties = {
-	backgroundColor: 'var(--report-bg-color)',
-	color: 'var(--text-color)',
-	padding: '10px',
-	textAlign: 'center',
-	borderBottom: '2px solid var(--border-color)',
-	borderRight: '1px solid var(--border-color)',
-};
-
-const subHeaderCellStyle: React.CSSProperties = {
-	...headerCellStyle,
-	fontWeight: 'normal',
-	fontSize: '0.9em',
-};
-
-const cellStyle: React.CSSProperties = {
-	padding: '10px',
-	borderBottom: '1px solid var(--border-color)',
-	borderRight: '1px solid var(--border-color)',
-	textAlign: 'center',
-};
-
-const totalCellStyle: React.CSSProperties = {
-	...cellStyle,
-	fontWeight: 'bold',
-	backgroundColor: 'var(--report-bg-color)',
 };
 
 export default HoursTable;

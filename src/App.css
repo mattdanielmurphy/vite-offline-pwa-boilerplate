@@ -1,6 +1,7 @@
 #root {
 	max-width: 1280px;
 	margin: 0 auto;
+	padding: 0 20px;
 	text-align: center;
 }
 
@@ -9,7 +10,7 @@
 	--text-color: #000000;
 	--input-bg-color: #eeeeee;
 	--report-bg-color: #f9f9f9;
-	--border-color: #cccccc;
+	--border-color: #ffffff;
 	color-scheme: light dark;
 }
 
@@ -18,7 +19,7 @@
 	--text-color: #ffffff;
 	--input-bg-color: #555555;
 	--report-bg-color: #2c2c2c;
-	--border-color: #555555;
+	--border-color: #1a1a1a;
 }
 
 
@@ -37,11 +38,11 @@ select,
 textarea {
 	color: var(--text-color);
 	background-color: var(--input-bg-color);
-	border: none;
+	border: 2px solid var(--border-color);
 	border-radius: 10px;
 	font-size: 16px;
 	padding: 12px;
-	box-sizing: border-box;
+	/* box-sizing: border-box; */
 }
 
 select {
@@ -72,6 +73,11 @@ button {
 		padding: 0;
 	}
 
+	#root {
+		min-width: 100%;
+		box-sizing: border-box;
+	}
+
 	.desktop-nav {
 		display: none !important;
 	}
@@ -86,13 +92,11 @@ button {
 		flex-wrap: wrap;
 		justify-content: start;
 		column-gap: 20px;
-		row-gap: 20px;
-		border: 1px solid var(--border-color);
+		row-gap: 10px;
 		border-radius: 10px;
 		margin: 0 auto;
 		margin-bottom: 20px;
-		padding: 15px !important;
-		padding-top: 20px !important;
+		margin-top: 30px;
 	}
 
 	input,
@@ -199,15 +203,9 @@ button {
 }
 
 #overtime-hours-input {
-	width: 53px;
+	width: 73px;
 	padding: 12px 8px;
 	text-align: center;
-}
-
-@media (max-width: 767px) {
-	.report-form {
-		padding: 0 20px;
-	}
 }
 
 .desktop-nav {
@@ -264,7 +262,60 @@ button {
 	border-radius: 5px;
 	cursor: pointer;
 	margin: 0;
-	margin-top: -15px;
 	padding: 0;
 	vertical-align: middle;
+}
+
+h2 {
+	text-align: left;
+	margin-top: 10px;
+}
+
+/* CONFIRM MODAL */
+
+.modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 1000;
+}
+
+.modal-content {
+	background: white;
+	padding: 20px;
+	border-radius: 8px;
+	max-width: 500px;
+	width: 90%;
+}
+
+.modal-buttons {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 20px;
+	gap: 10px;
+}
+
+.modal-buttons button {
+	padding: 10px 20px;
+	border-radius: 4px;
+	cursor: pointer;
+	flex: 1;
+}
+
+.primary-button {
+	background-color: #007bff;
+	color: white;
+	border: none;
+}
+
+.secondary-button {
+	background-color: #6c757d;
+	color: white;
+	border: none;
 }
