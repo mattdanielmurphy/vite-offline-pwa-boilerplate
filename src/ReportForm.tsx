@@ -258,7 +258,7 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 			if (!fieldsSetBeforeDateChange.name) {
 				const dayOfWeek = getDay(date).toString() as keyof typeof defaultSchedule;
 				const scheduleForDay = defaultSchedule[dayOfWeek];
-				setName(scheduleForDay![timeIn]);
+				setName(scheduleForDay![timeIn as keyof typeof scheduleForDay]);
 			}
 		}
 	}, [date]);  // Only depend on date changes, not userModifiedFields
