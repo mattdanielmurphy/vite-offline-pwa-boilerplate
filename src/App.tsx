@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Route, Link, Routes, useLocation } from 'react-router-dom';
-import ReportForm from './ReportForm';
-import PastReports from './PastReports';
-import HoursTable from './HoursTable';
-import { supabase } from './supabaseClient';
 import './App.css';
-import { FaClipboardList, FaHistory, FaClock, FaCog } from 'react-icons/fa';
+
+import { FaClipboardList, FaClock, FaCog, FaHistory } from 'react-icons/fa';
+import { Link, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+
+import HoursTable from './HoursTable';
+import PastReports from './PastReports';
+import ReportForm from './ReportForm';
 import Settings from './Settings';
+import { supabase } from './supabaseClient';
 
 const Navigation: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
 	const location = useLocation();
@@ -166,7 +168,6 @@ const mobileNavStyle = (isDarkMode: boolean): React.CSSProperties => ({
 	backgroundColor: isDarkMode ? '#1C1C1E' : '#f8f8f8',
 	borderTop: `1px solid ${isDarkMode ? '#38383A' : '#e7e7e7'}`,
 	height: '70px',
-	paddingBottom: '20px',
 	zIndex: 1000,
 });
 

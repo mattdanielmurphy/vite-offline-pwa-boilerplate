@@ -4,7 +4,7 @@ import { Report } from './interfaces/Report';
 
 const PastReports: React.FC<{ reports: Report[], loading: boolean, onRefresh: () => void }> = ({ reports, loading, onRefresh }) => {
 	return (
-		<div style={{ maxWidth: '800px', margin: '0 auto' }}>
+		<div style={{ maxWidth: '400px', margin: '0 auto' }}>
 			<button onClick={onRefresh} className="secondary-button">
 				Refresh Data
 			</button>

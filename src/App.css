@@ -81,56 +81,64 @@ button {
 	cursor: pointer;
 }
 
-@media (max-width: 767px) {
-	body {
-		padding: 0;
-	}
+/* @media (max-width: 767px) { */
+body {
+	padding: 0;
+}
 
-	#root {
-		min-width: 100%;
-		box-sizing: border-box;
-	}
+#root {
+	min-width: 100%;
+	box-sizing: border-box;
+}
 
-	.desktop-nav {
-		display: none !important;
-	}
+.desktop-nav {
+	display: none !important;
+}
 
+.mobile-nav {
+	display: flex !important;
+}
+
+form {
+	background-color: transparent !important;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: start;
+	column-gap: 20px;
+	row-gap: 10px;
+	border-radius: 10px;
+	margin: 0 auto;
+	margin-bottom: 20px;
+	margin-top: 30px;
+}
+
+input,
+select,
+textarea,
+button {
+	font-size: 16px;
+	margin-bottom: 5px;
+}
+
+h1 {
+	font-size: 32px !important;
+	margin-bottom: 20px;
+	text-align: left;
+}
+
+label {
+	font-size: 14px;
+	margin-bottom: 5px;
+	display: block;
+	line-height: 1.2;
+}
+
+/* } */
+
+/* Add padding only when running as standalone web app */
+@media (display-mode: standalone) {
 	.mobile-nav {
-		display: flex !important;
-	}
-
-	form {
-		background-color: transparent !important;
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: start;
-		column-gap: 20px;
-		row-gap: 10px;
-		border-radius: 10px;
-		margin: 0 auto;
-		margin-bottom: 20px;
-		margin-top: 30px;
-	}
-
-	input,
-	select,
-	textarea,
-	button {
-		font-size: 16px;
-		margin-bottom: 5px;
-	}
-
-	h1 {
-		font-size: 32px !important;
-		margin-bottom: 20px;
-		text-align: left;
-	}
-
-	label {
-		font-size: 14px;
-		margin-bottom: 5px;
-		display: block;
-		line-height: 1.2;
+		padding-bottom: env(safe-area-inset-bottom, 20px);
 	}
 }
 
@@ -149,7 +157,7 @@ button {
 }
 
 .report-form {
-	max-width: 600px;
+	max-width: 380px;
 	margin: 0 auto;
 }
 
@@ -250,7 +258,7 @@ h2.react-datepicker__current-month {
 }
 
 .desktop-nav {
-	margin: 15px 0;
+	margin: 60px auto 0 auto;
 	justify-content: center;
 }
 
@@ -269,7 +277,7 @@ h2.react-datepicker__current-month {
 }
 
 @media (min-width: 768px) {
-	.form-group {
+	/* .form-group {
 		display: flex;
 		align-items: center;
 		justify-content: start;
@@ -277,15 +285,15 @@ h2.react-datepicker__current-month {
 
 	.form-group label {
 		width: 60px;
-	}
+	} */
 
 	.desktop-nav {
 		display: flex !important;
 	}
 
-	#content {
+	/* #content {
 		padding-top: 50px !important;
-	}
+	} */
 
 	.mobile-nav {
 		display: none !important;
@@ -497,8 +505,14 @@ thead {
 	font-weight: bold;
 }
 
+@media (max-width: 768px) {
+	.table-content {
+		top: 100px;
+	}
+}
+
 .table-content {
-	top: 100px;
+	top: 50px;
 	position: relative;
 	padding-bottom: 100px;
 }
@@ -507,8 +521,10 @@ thead {
 	z-index: 999;
 	position: fixed;
 	background: white;
-	width: 100vw;
-	left: 0;
+	/* width: 100vw; */
+	width: 100%;
+	max-width: 800px;
+	/* left: 0; */
 	top: 0;
 	padding: 20px;
 }
