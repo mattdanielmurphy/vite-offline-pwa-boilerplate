@@ -6,9 +6,8 @@ import { addDays, addHours, format, getDay, getHours, getMinutes, isAfter, isBef
 
 import ConfirmationModal from './components/ConfirmationModal';
 import DatePicker from 'react-datepicker';
+import { shift } from "@floating-ui/dom"; // Add this import
 import { supabase } from './supabaseClient';
-
-const defaultWeather = 'Cloudy'; // Default weather
 
 // Schedule object to determine default names based on day and time
 const defaultSchedule = {
@@ -49,7 +48,7 @@ const defaultSchedule = {
 	},
 };
 
-// Add this after the defaultSchedule object and before the ReportForm component
+// default weather per month in Vancouver
 const vancouverWeather = {
 	January: "Rainy",
 	February: "Rainy",
@@ -72,6 +71,7 @@ const getDefaultWeather = () => {
 };
 
 const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }) => {
+	const formRef = useRef<HTMLFormElement>(null);
 	const [date, setDate] = useState<Date | null>(new Date()); // for testing replace with e.g.: new Date(`2024-10-27T08:30`)
 	const [name, setName] = useState<string>(''); // Default name
 	const [weather, setWeather] = useState<string>(getDefaultWeather()); // Default weather
@@ -381,7 +381,7 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 	return (
 		<div className="report-form">
 			<h1>New Report</h1>
-			<form onSubmit={submitReport}>
+			<form ref={formRef} onSubmit={submitReport}>
 				<div className="form-group">
 					<label htmlFor="date-input">Date</label>
 					<DatePicker
@@ -390,27 +390,14 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 						onChange={handleDateChange}
 						dateFormat="yyyy-MM-dd"
 						placeholderText="Select a date"
-					/>
-				</div>
-
-				<div className="form-group overtime-group">
-					<label htmlFor="overtime-hours-input">Overtime Hours</label>
-					<input
-						id="overtime-hours-input"
-						type="number"
-						value={overtimeHours}
-						onChange={(e) => {
-							setOvertimeHours(parseFloat(e.target.value));
-							setIsOvertimeHighlighted(false);
-							setIsOvertimeAutoSet(false);  // Clear auto-set state on manual change
-						}}
-						min="0"
-						step="0.25"
-						style={{
-							backgroundColor: isOvertimeHighlighted ? '#fff3cd' : 'var(--input-bg-color)',
-							borderColor: isOvertimeAutoSet ? '#ffc107' : 'var(--border-color)',
-							transition: 'background-color 0.3s ease, border-color 0.3s ease'
-						}}
+						className="dark-mode-datepicker"
+						popperModifiers={[
+							shift({
+								padding: 0,
+								boundary: formRef.current || undefined,
+							})
+						]}
+						calendarClassName="dark-mode-calendar"
 					/>
 				</div>
 
@@ -442,22 +429,6 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 				)}
 
 				<div className="form-group">
-					<label htmlFor="weather-input">Weather</label>
-					<select
-						id="weather-input"
-						value={weather}
-						onChange={(e) => setWeather(e.target.value)}
-					>
-						<option value="Rainy">Rainy</option>
-						<option value="Cloudy">Cloudy</option>
-						<option value="Sunny">Sunny</option>
-						<option value="Windy">Windy</option>
-						<option value="Snowy">Snowy</option>
-						<option value="Other">Other</option>
-					</select>
-				</div>
-
-				<div className="form-group">
 					<label htmlFor="time-in-input">Time In</label>
 					<input
 						id="time-in-input"
@@ -478,6 +449,44 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 				</div>
 
 				<div className="form-group">
+					<label htmlFor="weather-input">Weather</label>
+					<select
+						id="weather-input"
+						value={weather}
+						onChange={(e) => setWeather(e.target.value)}
+					>
+						<option value="Rainy">Rainy</option>
+						<option value="Cloudy">Cloudy</option>
+						<option value="Sunny">Sunny</option>
+						<option value="Windy">Windy</option>
+						<option value="Snowy">Snowy</option>
+						<option value="Other">Other</option>
+					</select>
+				</div>
+
+				<div className="form-group overtime-group">
+					<label htmlFor="overtime-hours-input">Overtime Hours</label>
+					<input
+						id="overtime-hours-input"
+						type="number"
+						value={overtimeHours}
+						onChange={(e) => {
+							setOvertimeHours(parseFloat(e.target.value));
+							setIsOvertimeHighlighted(false);
+							setIsOvertimeAutoSet(false);  // Clear auto-set state on manual change
+						}}
+						min="0"
+						step="0.25"
+						style={{
+							backgroundColor: isOvertimeHighlighted ? '#fff3cd' : 'var(--input-bg-color)',
+							color: isOvertimeHighlighted ? '#000' : 'var(--text-color)',
+							borderColor: isOvertimeAutoSet ? '#ffc107' : 'var(--border-color)',
+							transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease'
+						}}
+					/>
+				</div>
+
+				<div className="form-group details-group">
 					<label htmlFor="details-input">Details</label>
 					<textarea
 						id="details-input"

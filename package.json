@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.6.12",
     "@supabase/supabase-js": "^2.45.6",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",

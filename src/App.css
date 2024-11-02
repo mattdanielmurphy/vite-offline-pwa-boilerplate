@@ -5,12 +5,17 @@
 	text-align: center;
 }
 
+* {
+	box-sizing: border-box;
+}
+
 :root {
 	--bg-color: #ffffff;
 	--text-color: #000000;
 	--input-bg-color: #eeeeee;
 	--report-bg-color: #f9f9f9;
 	--border-color: #ffffff;
+	--header-bg: #f5f5f5;
 	color-scheme: light dark;
 }
 
@@ -20,6 +25,7 @@
 	--input-bg-color: #555555;
 	--report-bg-color: #2c2c2c;
 	--border-color: #1a1a1a;
+	--header-bg: #2a2a2a;
 }
 
 
@@ -29,8 +35,14 @@ body {
 	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+.details-group label {
+	height: 32px;
+	display: flex;
+	align-items: end;
+}
+
 #details-input {
-	width: 342px;
+	width: 288px;
 }
 
 input,
@@ -42,7 +54,8 @@ textarea {
 	border-radius: 10px;
 	font-size: 16px;
 	padding: 12px;
-	/* box-sizing: border-box; */
+	height: 46px;
+	box-sizing: border-box;
 }
 
 select {
@@ -104,6 +117,7 @@ button {
 	textarea,
 	button {
 		font-size: 16px;
+		margin-bottom: 5px;
 	}
 
 	h1 {
@@ -116,6 +130,7 @@ button {
 		font-size: 14px;
 		margin-bottom: 5px;
 		display: block;
+		line-height: 1.2;
 	}
 }
 
@@ -146,7 +161,20 @@ button {
 .form-group label {
 	/* width: 60px; */
 	text-align: left;
-	padding-left: 5px;
+	padding-left: 7px;
+}
+
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+	-moz-appearance: textfield;
+	appearance: textfield;
 }
 
 .form-group label[for='date-input'] {
@@ -156,6 +184,10 @@ button {
 #date-input {
 	margin-bottom: 0;
 	width: 118px !important;
+	text-align: center;
+}
+
+h2.react-datepicker__current-month {
 	text-align: center;
 }
 
@@ -184,6 +216,11 @@ button {
 	text-align: center;
 }
 
+#time-in-input,
+#time-out-input {
+	width: auto;
+}
+
 .secondary-button {
 	background-color: #8E8E93 !important;
 }
@@ -202,8 +239,12 @@ button {
 	text-align: left;
 }
 
+.overtime-group label {
+	width: 57px;
+}
+
 #overtime-hours-input {
-	width: 73px;
+	width: 57px;
 	padding: 12px 8px;
 	text-align: center;
 }
@@ -318,4 +359,156 @@ h2 {
 	background-color: #6c757d;
 	color: white;
 	border: none;
+}
+
+.dark-mode-calendar {
+	background-color: #2b2b2b !important;
+	color: #fff !important;
+	border-color: #444 !important;
+}
+
+.dark-mode-calendar .react-datepicker__header {
+	background-color: #1f1f1f !important;
+	border-bottom-color: #444 !important;
+	padding-bottom: 6px 0 !important;
+}
+
+.dark-mode-calendar .react-datepicker__current-month {
+	margin-top: 6px !important;
+	color: #fff !important;
+	margin-bottom: 4px !important;
+}
+
+.dark-mode-calendar .react-datepicker__day-name {
+	color: #fff !important;
+}
+
+.dark-mode-calendar .react-datepicker__day {
+	color: #fff !important;
+}
+
+.dark-mode-calendar .react-datepicker__day:hover {
+	background-color: #444 !important;
+}
+
+.dark-mode-calendar .react-datepicker__day--selected {
+	background-color: #0066cc !important;
+}
+
+.react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle {
+	fill: #1f1f1f !important;
+	color: #1f1f1f !important;
+}
+
+.react-datepicker-popper .react-datepicker__triangle {
+	stroke: #444 !important;
+}
+
+.dark-mode-calendar .react-datepicker__day--disabled {
+	color: #666 !important;
+}
+
+.dark-mode-calendar .react-datepicker__navigation {
+	top: 8px !important;
+	background: none !important;
+}
+
+.hours-table {
+	border-collapse: collapse;
+	width: 100%;
+	margin-right: 20px;
+	padding-right: 20px;
+}
+
+.hours-table th,
+.hours-table td {
+	border: 1px solid var(--border-color);
+	padding: 8px;
+}
+
+.header-cell,
+.sub-header-cell {
+	background-color: var(--header-bg);
+	position: sticky;
+	top: 0;
+	z-index: 1;
+}
+
+[data-theme='dark'] {
+	--border-color: #444;
+	--header-bg: #2a2a2a;
+}
+
+.sub-header-cell:empty {
+	background: none;
+}
+
+.table-container {
+	width: 100%;
+	position: relative;
+	/* overflow-x: auto; */
+}
+
+.table-spacer {
+	position: absolute;
+	left: 0;
+	top: 0;
+}
+
+.hours-table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+/* Ensure the table cells maintain their width */
+.hours-table th,
+.hours-table td {
+	white-space: nowrap;
+	min-width: fit-content;
+}
+
+.month-section {
+	margin-bottom: 2rem;
+	border: 1px solid var(--border-color);
+	border-radius: 4px;
+}
+
+.hours-table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+thead {
+	background-color: var(--header-bg);
+	z-index: 2;
+	position: sticky;
+	top: 166px;
+}
+
+.sub-header-cell:empty {
+	background: none;
+}
+
+.date-column {
+	min-width: 50px;
+}
+
+.total-cell {
+	font-weight: bold;
+}
+
+.table-content {
+	top: 100px;
+	position: relative;
+	padding-bottom: 100px;
+}
+
+.fixed-header {
+	z-index: 999;
+	position: fixed;
+	background: white;
+	width: 100vw;
+	left: 0;
+	top: 0;
+	padding: 20px;
 }
