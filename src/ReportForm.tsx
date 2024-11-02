@@ -329,6 +329,14 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 				name: false
 			});
 			
+			// Reset form state values
+			setWeather(getDefaultWeather()); // Reset weather to default
+			setDetails(''); // Reset details
+			setTasks([{ time: '', description: '' }]); // Reset tasks
+			setOvertimeHours(0); // Reset overtime hours
+			setOtherName(''); // Reset other name
+			setOtherWeather(''); // Reset other weather
+			
 			// Reinitialize with defaults
 			initializeFormDefaults();
 			
