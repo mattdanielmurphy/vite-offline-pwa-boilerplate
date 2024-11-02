@@ -187,7 +187,9 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 		// Find the widest table
 		let maxWidth = 0;
 		tables.forEach(table => {
-			maxWidth = Math.max(maxWidth, table.offsetWidth);
+			if (table instanceof HTMLElement) {
+				maxWidth = Math.max(maxWidth, table.offsetWidth);
+			}
 		});
 
 		// Set spacer width based on widest table
