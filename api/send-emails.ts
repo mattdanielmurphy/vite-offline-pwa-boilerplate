@@ -1,5 +1,6 @@
-import { google } from "googleapis";
 import nodemailer, { Transporter } from 'nodemailer';
+
+import { google } from "googleapis";
 import jwt from 'jsonwebtoken'; // Import JWT for token generation
 
 const createTransporter = async (): Promise<Transporter> => {
@@ -48,28 +49,36 @@ const createTransporter = async (): Promise<Transporter> => {
 };
 
 export async function POST(request: Request) {
-  const emails = await request.json(); // Expecting an array of email objects
+  const emails = await request.json();
 
   try {
     const emailTransporter = await createTransporter();
 
-    // Iterate over each email object
     for (const email of emails) {
-      const {address, frequency, enabled, subject} = email
+      const { address, subject, text, includeConfirmationLink, ...tokenParams } = email;
+      
       if (!process.env.JWT_SECRET) {
         return new Response(JSON.stringify({ error: 'JWT_SECRET is not defined' }), { status: 500 });
       }
-      const token = jwt.sign({ address, frequency, enabled }, process.env.JWT_SECRET, { expiresIn: '1h' }); // Generate token
+
+      // Forward all params except the email metadata
+      const token = jwt.sign(
+        { address, ...tokenParams }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '1h' }
+      );
+
       if (!process.env.VERCEL_URL) {
-        throw new Error('VERCEL_URL is not defined'); // Throw an error if VERCEL_URL is undefined
+        throw new Error('VERCEL_URL is not defined');
       }
-      const confirmationLink = `${process.env.VERCEL_URL.includes('localhost') ? 'http://' : 'https://'}${process.env.VERCEL_URL}/api/confirm?token=${token}`; // Include token in link
+
+      const confirmationLink = `${process.env.VERCEL_URL.includes('localhost') ? 'http://' : 'https://'}${process.env.VERCEL_URL}/api/confirm?token=${token}`;
 
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: address,
         subject,
-        text: `${email.text}${email.includeConfirmationLink ? `\n${confirmationLink}` : ''}`, // Include text and confirmation link conditionally
+        text: `${text}${includeConfirmationLink ? `\n${confirmationLink}` : ''}`,
       };
 
       await emailTransporter.sendMail(mailOptions);

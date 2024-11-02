@@ -26,66 +26,12 @@ interface TotalHours {
 
 const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void }> = ({ reports, onRefresh }) => {
 	const [dailyHours, setDailyHours] = useState<DailyHours>({});
-	const [totalHours, setTotalHours] = useState<TotalHours>({});
-	const [dates, setDates] = useState<string[]>([]);
 	const [names, setNames] = useState<string[]>([]);
-	const [hasOvertime, setHasOvertime] = useState<{ [name: string]: boolean }>({});
 	const [loading, setLoading] = useState(true);
 
 	// Add ref for header and body
-	const headerRef = useRef<HTMLTableElement>(null);
-	const bodyWrapperRef = useRef<HTMLDivElement>(null);
 	const tableRef = useRef<HTMLTableElement>(null);
 	const spacerRef = useRef<HTMLDivElement>(null);
-
-	// Function to sync column widths
-	const syncColumnWidths = useCallback(() => {
-		if (!headerRef.current || !bodyWrapperRef.current) return;
-		
-		const headerCells = Array.from(headerRef.current.querySelectorAll('tr:first-child th')) as HTMLElement[];
-		const bodyCells = Array.from(bodyWrapperRef.current.querySelectorAll('tr:first-child td')) as HTMLElement[];
-		
-		headerCells.forEach((headerCell, index) => {
-			const width = headerCell.offsetWidth;
-			const bodyCell = bodyCells[index];
-			if (bodyCell) bodyCell.style.width = `${width}px`;
-		});
-	}, []);
-
-	// Function to sync horizontal scrolling
-	const handleScroll = useCallback((e: Event) => {
-		if (!headerRef.current || !bodyWrapperRef.current) return;
-		
-		if (e.target === bodyWrapperRef.current) {
-			headerRef.current.style.transform = 
-				`translateX(-${bodyWrapperRef.current.scrollLeft}px)`;
-		}
-	}, []);
-
-	// Set up listeners
-	useEffect(() => {
-		const bodyWrapper = bodyWrapperRef.current;
-		if (bodyWrapper) {
-			bodyWrapper.addEventListener('scroll', handleScroll);
-			// Initial sync
-			syncColumnWidths();
-			
-			// Also sync on window resize
-			window.addEventListener('resize', syncColumnWidths);
-		}
-
-		return () => {
-			if (bodyWrapper) {
-				bodyWrapper.removeEventListener('scroll', handleScroll);
-				window.removeEventListener('resize', syncColumnWidths);
-			}
-		};
-	}, [handleScroll, syncColumnWidths]);
-
-	// Sync columns whenever data changes
-	useEffect(() => {
-		syncColumnWidths();
-	}, [dailyHours, syncColumnWidths]);
 
 	const processReports = (reports: HoursTableReport[]) => {
 		const hours: DailyHours = {};
@@ -132,10 +78,7 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 		const processedNames = Array.from(uniqueNames).sort();
 
 		setDailyHours(hours);
-		setTotalHours(totals);
-		setDates(processedDates);
 		setNames(processedNames);
-		setHasOvertime(overtimeCheck);
 		setLoading(false);
 	};
 
@@ -206,15 +149,11 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 	}, [dailyHours, updateSpacerWidth]);
 
 	return (
-		<div className="page-container" style={{ maxWidth: '800px', margin: '0 auto' }}>
-			<div className="fixed-header">
-				<div>
+		<div className="page-container">
 					<button onClick={onRefresh} className="secondary-button" style={{ maxWidth: '300px' }}>
 						Refresh Data
 					</button>
 					<h1>Hours Worked</h1>
-				</div>
-			</div>
 			<div className="table-content">
 				{loading ? (
 					<div className="loading-spinner">
@@ -228,8 +167,10 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 							
 							return (
 								<div key={month} className="month-section">
-									<h2>{month}</h2>
-									<div className="table-container">
+									<div className="month-label">
+										<h2>{month}</h2>
+									</div>
+									<div className="table-container" style={{ maxWidth: '800px', margin: '0 auto' }}>
 										<table ref={tableRef} className="hours-table">
 											<thead>
 												<tr>

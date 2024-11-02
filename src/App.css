@@ -1,5 +1,4 @@
 #root {
-	max-width: 1280px;
 	margin: 0 auto;
 	padding: 0 20px;
 	text-align: center;
@@ -14,18 +13,20 @@
 	--text-color: #000000;
 	--input-bg-color: #eeeeee;
 	--report-bg-color: #f9f9f9;
-	--border-color: #ffffff;
+	--border-color: #d6d6d6;
 	--header-bg: #f5f5f5;
+	--modal-bg-color: rgba(255, 255, 255, 0.5);
 	color-scheme: light dark;
 }
 
 .dark-mode {
 	--bg-color: #1a1a1a;
 	--text-color: #ffffff;
-	--input-bg-color: #555555;
+	--input-bg-color: #333;
 	--report-bg-color: #2c2c2c;
-	--border-color: #1a1a1a;
+	--border-color: #3d3d3d;
 	--header-bg: #2a2a2a;
+	--modal-bg-color: rgba(0, 0, 0, 0.5);
 }
 
 
@@ -50,7 +51,7 @@ select,
 textarea {
 	color: var(--text-color);
 	background-color: var(--input-bg-color);
-	border: 2px solid var(--border-color);
+	border: 2px solid var(--bg-color);
 	border-radius: 10px;
 	font-size: 16px;
 	padding: 12px;
@@ -70,8 +71,36 @@ select {
 	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
 }
 
+.primary-button {
+	background-color: #007bff;
+	color: white;
+	border: none;
+}
+
+.primary-button:hover {
+	background-color: #0056b3;
+}
+
+.secondary-button {
+	background-color: #6c757d;
+	color: white;
+	border: none;
+}
+
+.secondary-button:hover {
+	background-color: #5a6268;
+}
+
+.secondary-button.danger {
+	background-color: #dc3545;
+	color: white;
+}
+
+.secondary-button.danger:hover {
+	background-color: #c82333;
+}
+
 button {
-	background-color: #007AFF !important;
 	color: white;
 	border: none;
 	border-radius: 10px;
@@ -230,7 +259,7 @@ h2.react-datepicker__current-month {
 }
 
 .secondary-button {
-	background-color: #8E8E93 !important;
+	background-color: #8E8E93;
 }
 
 .checkbox-group {
@@ -258,7 +287,7 @@ h2.react-datepicker__current-month {
 }
 
 .desktop-nav {
-	margin: 60px auto 0 auto;
+	margin: 20px auto 0 auto;
 	justify-content: center;
 }
 
@@ -303,8 +332,8 @@ h2.react-datepicker__current-month {
 .delete-button {
 	background: none !important;
 	border: none;
-	width: 40px;
-	height: 40px;
+	height: 20px;
+	width: 20px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -328,7 +357,7 @@ h2 {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background-color: rgba(0, 0, 0, 0.5);
+	background-color: var(--modal-bg-color);
 	display: flex;
 	justify-content: center;
 	align-items: center;
@@ -336,7 +365,7 @@ h2 {
 }
 
 .modal-content {
-	background: white;
+	background: var(--bg-color);
 	padding: 20px;
 	border-radius: 8px;
 	max-width: 500px;
@@ -372,7 +401,6 @@ h2 {
 .dark-mode-calendar {
 	background-color: #2b2b2b !important;
 	color: #fff !important;
-	border-color: #444 !important;
 }
 
 .dark-mode-calendar .react-datepicker__header {
@@ -430,16 +458,24 @@ h2 {
 
 .hours-table th,
 .hours-table td {
-	border: 1px solid var(--border-color);
+	border: none;
 	padding: 8px;
+	white-space: nowrap;
+	min-width: fit-content;
 }
 
-.header-cell,
-.sub-header-cell {
-	background-color: var(--header-bg);
-	position: sticky;
-	top: 0;
-	z-index: 1;
+.hours-table th:not(:last-child),
+.hours-table td:not(:last-child) {
+	border-right: 1px solid var(--border-color);
+}
+
+/* .hours-table tbody tr:not(:last-child), */
+/* .hours-table thead {
+	border-bottom: 1px solid var(--border-color);
+} */
+
+.hours-table tbody tr:nth-child(even) {
+	background-color: var(--report-bg-color);
 }
 
 [data-theme='dark'] {
@@ -477,8 +513,26 @@ h2 {
 
 .month-section {
 	margin-bottom: 2rem;
-	border: 1px solid var(--border-color);
 	border-radius: 4px;
+}
+
+.month-label {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	margin-bottom: 0;
+	height: 60px;
+	padding-top: 10px;
+	background: var(--bg-color);
+	width: 100%;
+	margin-top: -20px;
+}
+
+.month-label h2,
+h1 {
+	max-width: 800px;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 .hours-table {
@@ -486,15 +540,16 @@ h2 {
 	width: 100%;
 }
 
+.delete-button:hover svg {
+	fill: #ff394d;
+}
+
 thead {
 	background-color: var(--header-bg);
 	z-index: 2;
 	position: sticky;
-	top: 166px;
-}
-
-.sub-header-cell:empty {
-	background: none;
+	top: 60px;
+	z-index: 1;
 }
 
 .date-column {
@@ -507,27 +562,19 @@ thead {
 
 @media (max-width: 768px) {
 	.table-content {
-		top: 100px;
+		/* top: 100px; */
 	}
 }
 
 .table-content {
-	top: 50px;
 	position: relative;
-	padding-bottom: 100px;
 }
 
-.fixed-header {
-	z-index: 999;
-	position: fixed;
-	background: white;
-	width: 100vw;
-	left: 0;
-	top: 0;
-	padding: 20px;
+.secondary-button.danger {
+	background-color: #dc3545;
+	color: white;
 }
 
-.fixed-header div {
-	max-width: 800px;
-	margin: 0 auto;
+.secondary-button.danger:hover {
+	background-color: #c82333;
 }

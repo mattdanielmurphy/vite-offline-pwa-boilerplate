@@ -8,6 +8,7 @@ interface ConfirmationModalProps {
   cancelText: string;
   onConfirm: () => void;
   onCancel: () => void;
+  isDanger?: boolean;
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -18,6 +19,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   cancelText,
   onConfirm,
   onCancel,
+  isDanger = false,
 }) => {
   if (!isOpen) return null;
 
@@ -29,7 +31,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <div className="modal-buttons">
           <button 
             onClick={onConfirm}
-            className="secondary-button"
+            className={`secondary-button ${isDanger ? 'danger' : ''}`}
           >
             {confirmText}
           </button>
