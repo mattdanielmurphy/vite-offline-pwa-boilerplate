@@ -206,7 +206,7 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 	}, [dailyHours, updateSpacerWidth]);
 
 	return (
-		<div className="page-container">
+		<div className="page-container" style={{ maxWidth: '800px', margin: '0 auto' }}>
 			<div className="fixed-header">
 				<button onClick={onRefresh} className="secondary-button">
 					Refresh Data
