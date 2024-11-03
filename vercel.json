@@ -12,7 +12,7 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "admiralty-reports.vercel.app"
+                    "value": "(?:.*\\.)?vercel\\.app"
                 }
             ]
         }
