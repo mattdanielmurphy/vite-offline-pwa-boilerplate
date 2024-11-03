@@ -1,7 +1,8 @@
 import { FaChevronDown, FaSpinner, FaTrashAlt } from 'react-icons/fa';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import ConfirmationModal from './components/ConfirmationModal';
+import { isValidEmail } from './utils/validation';
 import { supabase } from './supabaseClient';
 
 interface EmailSetting {
@@ -14,6 +15,142 @@ interface EmailSetting {
   pendingDeletion?: boolean;
   touched?: boolean;
 }
+
+// Add cache constants
+const CACHE_KEY = 'email_settings_cache';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+interface CachedData {
+  data: EmailSetting[];
+  timestamp: number;
+}
+
+// Separate AddEmailForm component
+const AddEmailForm: React.FC<{
+  onAdd: (email: string, frequency: string) => void;
+  disabled: boolean;
+}> = ({ onAdd, disabled }) => {
+  const [isAdding, setIsAdding] = useState(false);
+  const [email, setEmail] = useState('Add Email');
+  const [frequency, setFrequency] = useState('daily');
+  const [touched, setTouched] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isValidEmail(email)) {
+      onAdd(email, frequency);
+      setEmail('Add Email');
+      setTouched(false);
+      setIsAdding(false);
+    }
+  };
+
+  const handleFocus = () => {
+    if (!isAdding) {
+      setIsAdding(true);
+      setEmail('');
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ 
+      marginTop: '20px',
+      display: 'flex',
+      justifyContent: 'center'
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '10px',
+        width: isAdding ? '100%' : 'auto'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          gap: '8px'
+        }}>
+          <input
+            ref={inputRef}
+            type={isAdding ? "email" : "text"}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onFocus={handleFocus}
+            onBlur={() => setTouched(true)}
+            placeholder="email@example.com"
+            className={isAdding ? undefined : 'secondary-button add-email-button'}
+            style={{ 
+              flex: isAdding ? 1 : 'initial',
+              width: isAdding ? '100%' : 'auto',
+              borderColor: touched && email && !isValidEmail(email) ? '#dc3545' : undefined,
+              cursor: isAdding ? 'text' : 'pointer',
+              backgroundColor: isAdding ? 'var(--bg-color)' : undefined,
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '16px',
+              padding: '12px',
+              textAlign: isAdding ? 'left' : 'center',
+              transition: 'all 0.2s ease'
+            }}
+            required
+            disabled={disabled}
+          />
+          {isAdding && (
+            <select
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value)}
+              disabled={disabled}
+              style={{
+                borderRadius: '10px',
+                padding: '12px',
+                fontSize: '16px',
+                border: 'none',
+                backgroundColor: 'var(--bg-color)'
+              }}
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          )}
+        </div>
+        
+        {touched && email && !isValidEmail(email) && (
+          <div style={{ color: '#dc3545', fontSize: '14px' }}>
+            Please enter a valid email address
+          </div>
+        )}
+
+        {isAdding && (
+          <div style={{ 
+            display: 'flex', 
+            gap: '8px',
+            marginTop: '4px'
+          }}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsAdding(false);
+                setEmail('Add Email');
+                setTouched(false);
+              }}
+              className="secondary-button"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="secondary-button"
+              disabled={disabled || !isValidEmail(email)}
+            >
+              Add
+            </button>
+          </div>
+        )}
+      </div>
+    </form>
+  );
+};
 
 const Settings: React.FC = () => {
   const [emailSettings, setEmailSettings] = useState<EmailSetting[]>([]);
@@ -37,28 +174,92 @@ const Settings: React.FC = () => {
     email: ''
   });
 
-  useEffect(() => {
-    const fetchEmailSettings = async () => {
-      setFetching(true); // Set fetching to true when starting to fetch
+  // Add cache-related functions
+  const saveToCache = useCallback((data: EmailSetting[]) => {
+    const cacheData: CachedData = {
+      data,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+  }, []);
+
+  const getFromCache = useCallback((): EmailSetting[] | null => {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+
+    const { data, timestamp }: CachedData = JSON.parse(cached);
+    if (Date.now() - timestamp > CACHE_DURATION) {
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+
+    return data;
+  }, []);
+
+  // Modify the fetch function to use cache
+  const fetchEmailSettings = useCallback(async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cachedData = getFromCache();
+      if (cachedData) {
+        console.log('Using cached email settings');
+        setEmailSettings(cachedData);
+        setFetching(false);
+        return;
+      }
+    }
+
+    setFetching(true);
+    try {
       const { data: users, error: userError } = await supabase
         .from('report-email-recipients')
         .select('address, frequency, enabled, confirmed, pending_deletion');
 
       if (userError) {
         console.error('Error fetching email settings:', userError);
-        setFetching(false); // Reset fetching state on error
-        return; // Exit if there's an error
+        return;
       }
 
-      setEmailSettings(users.map(user => ({
+      const processedData = users.map(user => ({
         ...user,
         pendingDeletion: user.pending_deletion,
-      }))); // Convert snake_case to camelCase when setting state
-      setFetching(false); // Reset fetching state after successful fetch
-    };
+      }));
 
-    fetchEmailSettings(); // Call the fetch function
-  }, []); // Empty dependency array to run once on mount
+      setEmailSettings(processedData);
+      saveToCache(processedData);
+    } catch (error) {
+      console.error('Error fetching email settings:', error);
+    } finally {
+      setFetching(false);
+    }
+  }, [saveToCache, getFromCache]);
+
+  // Modify the useEffect to use the new fetch function
+  useEffect(() => {
+    fetchEmailSettings();
+
+    const subscription = supabase
+      .channel('email_settings_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'report-email-recipients'
+        },
+        async (payload) => {
+          console.log('Email settings changed:', payload);
+          // Force refresh when changes occur
+          await fetchEmailSettings(true);
+        }
+      )
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchEmailSettings]);
 
   const handleToggle = (index: number) => {
     const updatedSettings = [...emailSettings];
@@ -239,6 +440,7 @@ const Settings: React.FC = () => {
         });
 
         if (response.ok) {
+          localStorage.removeItem(CACHE_KEY); // Clear cache after successful save
           setNotification('Changes saved and confirmation emails sent successfully!');
           // Reset modified flags and remove isNew flag after successful save
           setEmailSettings(prev => prev.map(setting => ({ 
@@ -391,216 +593,191 @@ const Settings: React.FC = () => {
     setNotification('Deletion cancelled.');
   };
 
-  // Add email validation function
-  const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  const handleAddNewEmail = (email: string, frequency: string) => {
+    const newEmail: EmailSetting = {
+      address: email,
+      frequency,
+      enabled: true,
+      isNew: true,
+      modified: true
+    };
+    setEmailSettings([...emailSettings, newEmail]);
+    setChangesMade(true);
   };
 
   return (
     <div style={{ width: '100%' }}>
       <h1>Settings</h1>
-      {fetching && <div>Loading email settings...</div>}
       {notification && <div style={{ color: 'orange' }}>{notification}</div>}
-      <form style={{ 
-        display: 'block',
-        maxWidth: '414px',
-        margin: '0 auto',
-        position: 'relative', // For proper overlay stacking
-        backgroundColor: 'var(--bg-color)' // Match the page background
-      }}>
+      
+      <div style={{ maxWidth: '414px', margin: '0 auto' }}>
         <h3>Scheduled Email Reports</h3>
+        
         {emailSettings.map((setting, index) => (
           <div key={index} style={{ marginBottom: '10px' }}>
-            {/* Main row: Email and delete button */}
             <div 
               onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
               style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px',
-                backgroundColor: 'var(--input-bg-color)',
-                borderRadius: '10px',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                border: '2px solid var(--bg-color)',
               }}
             >
+              {/* Main row with email and expand/collapse */}
               <div style={{ 
                 display: 'flex', 
+                justifyContent: 'center', 
                 alignItems: 'center',
-                gap: '8px',
-                color: 'var(--text-color)',
-                textDecoration: setting.pendingDeletion ? 'line-through' : 'none'
+                padding: '12px',
               }}>
-                <FaChevronDown
-                  style={{
-                    transform: expandedIndex === index ? 'rotate(180deg)' : 'none',
-                    transition: 'transform 0.2s ease',
-                  }}
-                />
-                <span>{setting.address}</span>
-                {!setting.confirmed && !setting.isNew && (
-                  <span style={{ 
-                    color: 'orange',
-                    fontStyle: 'italic',
-                    fontSize: '14px'
-                  }}>
-                    (unconfirmed)
-                  </span>
-                )}
-                {setting.pendingDeletion && (
-                    <FaTrashAlt size={12} fill="#dc3545" />
-                )}
-              </div>
-              <button 
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 'bold', textDecoration: setting.pendingDeletion ? 'line-through' : 'none' }}>{setting.address}</div>
+                  <div style={{ fontSize: '14px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                    {setting.pendingDeletion ? 'pending deletion' : `${setting.frequency.toLowerCase()} reports ${setting.enabled ? 'enabled' : 'disabled'}`}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button 
                 type="button" 
                 onClick={(e) => handleDeleteClick(index, e)} 
                 className="delete-button"
-                style={{ color: 'var(--text-color)' }}
+                style={{ color: 'var(--text-color)', }}
                 disabled={setting.pendingDeletion}
               >
                 <FaTrashAlt size={18} />
               </button>
+                  <FaChevronDown 
+                    style={{ 
+                      transform: expandedIndex === index ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s ease'
+                    }} 
+                  />
+                </div>
+              </div>
+
+              {/* Expanded section with controls */}
+              {expandedIndex === index && (
+                <div 
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ 
+                    padding: '12px 12px 6px 12px',
+                    borderLeft: '5px solid var(--input-bg-color)',
+                    cursor: 'default'
+                  }}
+                >
+                  {setting.pendingDeletion ? (
+                    <div style={{ gap: '12px' }}>
+                      <button 
+                        type="button"
+                        onClick={() => handleUndoDelete(index)}
+                        className="secondary-button"
+                      >
+                        Undo Delete
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '12px',
+                      alignItems: 'center',
+                      justifyContent:'space-evenly'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => handleToggle(index)}
+                        className="secondary-button"
+                        style={{ 
+                          padding: '8px 12px',
+                          width: 'auto'
+                        }}
+                      >
+                        {setting.enabled ? 'Disable' : 'Enable'}
+                      </button>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                      }}>
+                        <span>Frequency:</span>
+                        <select
+                          value={setting.frequency}
+                          onChange={(e) => handleFrequencyChange(index, e.target.value)}
+                          style={{ flex: 1 }}
+                        >
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Expandable settings panel */}
-            {expandedIndex === index && (
+            {/* Confirmation status and resend button */}
+            {!setting.confirmed && (
               <div style={{ 
-                padding: '12px',
-                backgroundColor: 'var(--input-bg-color)',
-                borderBottomLeftRadius: '10px',
-                borderBottomRightRadius: '10px',
+                fontSize: '14px', 
+                color: '#dc3545',
+                marginTop: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}>
-                {setting.pendingDeletion ? (
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                  }}>
-                    <span style={{ 
-                      color: '#dc3545',
-                      fontWeight: 'bold'
-                    }}>
-                      Pending deletion
-                    </span>
-                    <button 
-                      type="button"
-                      onClick={() => handleUndoDelete(index)}
-                      className="secondary-button"
-                      style={{ 
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      Undo Delete
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <input
-                      type="email"
-                      value={setting.address}
-                      onChange={(e) => handleEmailChange(index, e.target.value)}
-                      onBlur={() => handleEmailBlur(index)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleSaveChanges();
-                        }
-                      }}
-                      placeholder="email@example.com"
-                      style={{ 
-                        width: 'calc(100% - 24px)',
-                        marginBottom: setting.touched && setting.address && !isValidEmail(setting.address) ? '4px' : '8px',
-                        borderColor: setting.touched && setting.address && !isValidEmail(setting.address) ? '#dc3545' : undefined,
-                      }}
-                      required
-                      disabled={setting.pendingDeletion}
-                    />
-                    {setting.touched && setting.address && !isValidEmail(setting.address) && (
-                      <div style={{ 
-                        color: '#dc3545', 
-                        fontSize: '14px',
-                        marginBottom: '8px'
-                      }}>
-                        Please enter a valid email address
-                      </div>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <input
-                          type="checkbox"
-                          checked={setting.enabled}
-                          onChange={() => handleToggle(index)}
-                          style={{ width: '20px', height: '20px' }}
-                        />
-                        Enabled
-                      </label>
-                      <select
-                        value={setting.frequency}
-                        onChange={(e) => handleFrequencyChange(index, e.target.value)}
-                        style={{ marginLeft: 'auto' }}
-                      >
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                      </select>
-                    </div>
-                  </>
-                )}
+                <span>Not confirmed</span>
+                <button
+                  onClick={() => handleResendConfirmation(setting.address)}
+                  disabled={confirmationLoading === setting.address}
+                  className="secondary-button"
+                  style={{ padding: '4px 8px', fontSize: '12px' }}
+                >
+                  {confirmationLoading === setting.address ? (
+                    <>
+                      <FaSpinner className="spinner" style={{ marginRight: '4px' }} />
+                      Sending...
+                    </>
+                  ) : (
+                    'Resend Confirmation'
+                  )}
+                </button>
               </div>
             )}
           </div>
         ))}
+
+        <AddEmailForm onAdd={handleAddNewEmail} disabled={loading} />
         
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '10px', 
-          marginTop: '20px',
-          width: '100%'
-        }}>
-          {changesMade && (
-            <button 
-              type="button" 
-              onClick={handleSaveChanges} 
-              disabled={loading}
-              className="primary-button"
-              style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-              }}
-            >
-              {loading ? (
-                <>
-                  <FaSpinner className="spinner" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </button>
-          )}
+        {changesMade && (
           <button 
-            type="button" 
-            onClick={handleAddEmail} 
-            className="secondary-button"
+            onClick={handleSaveChanges} 
             disabled={loading}
+            className="primary-button"
+            style={{ 
+              marginTop: '20px',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
           >
-            Add Email
+            {loading ? (
+              <>
+                <FaSpinner className="spinner" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
           </button>
-        </div>
-      </form>
+        )}
+      </div>
 
       <ConfirmationModal
         isOpen={deleteConfirmation.show}
         title="Confirm Delete"
-        message={`Are you sure you want to delete ${deleteConfirmation.email}? A confirmation email will be sent.`}
+        message={`Are you sure you want to delete ${deleteConfirmation.email}?`}
         confirmText="Delete"
         cancelText="Cancel"
         onConfirm={() => deleteConfirmation.index !== null && handleDeleteEmail(deleteConfirmation.index)}

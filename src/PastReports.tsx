@@ -1,13 +1,12 @@
+import { calculateHours, formatDate, formatTime } from './utils/dateTime';
+
 import { FaSpinner } from 'react-icons/fa';
 import React from 'react';
 import { Report } from './interfaces/Report';
 
-const PastReports: React.FC<{ reports: Report[], loading: boolean, onRefresh: () => void }> = ({ reports, loading, onRefresh }) => {
+const PastReports: React.FC<{ reports: Report[], loading: boolean }> = ({ reports, loading }) => {
 	return (
 		<div style={{ maxWidth: '400px', margin: '0 auto' }}>
-			<button onClick={onRefresh} className="secondary-button" style={{ maxWidth: '300px' }}>
-				Refresh Data
-			</button>
 			<h1>Past Reports</h1>
 			{loading ? (
 				<div style={{ textAlign: 'center', padding: '20px' }}>
@@ -15,7 +14,9 @@ const PastReports: React.FC<{ reports: Report[], loading: boolean, onRefresh: ()
 				</div>
 			) : (
 				reports.map((report) => {
-					const parsedTasks = report.tasks ? JSON.parse(report.tasks) : [];
+					const parsedTasks = typeof report.tasks === 'string' 
+						? JSON.parse(report.tasks) 
+						: (report.tasks || []);
 
 					return (
 						<div key={report.id} style={cardStyle} className="report-card">
@@ -81,51 +82,6 @@ const PastReports: React.FC<{ reports: Report[], loading: boolean, onRefresh: ()
 			)}
 		</div>
 	);
-};
-
-// The formatting functions and styles remain unchanged
-const formatDate = (dateValue: string | Date) => {
-	const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
-	return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-};
-
-const formatTime = (timeString: string) => {
-	if (!timeString) {
-		console.error('Invalid time string:', timeString);
-		return 'Invalid time'; // Return a fallback value for invalid input
-	}
-
-	const [hours, minutes] = timeString.split(':').map(Number);
-
-	if (isNaN(hours) || isNaN(minutes)) {
-		console.error('Invalid time format:', timeString);
-		return 'Invalid time'; // Return a fallback value for invalid format
-	}
-
-	const ampm = hours >= 12 ? 'pm' : 'am';
-	const formattedHours = hours % 12 || 12;
-	return minutes === 0 ? `${formattedHours}${ampm}` : `${formattedHours}:${minutes.toString().padStart(2, '0')}${ampm}`;
-};
-
-const calculateHours = (timeIn: string, timeOut: string) => {
-	const [inHours, inMinutes] = timeIn.split(':').map(Number);
-	const [outHours, outMinutes] = timeOut.split(':').map(Number);
-	let totalMinutes = (outHours * 60 + outMinutes) - (inHours * 60 + inMinutes);
-	if (totalMinutes < 0) {
-		totalMinutes += 24 * 60;
-	}
-	const hours = Math.floor(totalMinutes / 60);
-	const minutes = totalMinutes % 60;
-	return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
-};
-
-const formatTasks = (tasksString: string) => {
-	try {
-		return JSON.parse(tasksString);
-	} catch (error) {
-		console.error('Error parsing tasks:', error);
-		return [];
-	}
 };
 
 const cardStyle: React.CSSProperties = {
