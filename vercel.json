@@ -4,5 +4,17 @@
             "path": "/api/send-scheduled-reports",
             "schedule": "0 0 * * *"
         }
+    ],
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "admiralty-reports.vercel.app"
+                }
+            ]
+        }
     ]
 }
