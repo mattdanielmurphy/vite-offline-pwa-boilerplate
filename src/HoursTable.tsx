@@ -42,8 +42,9 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 
 		reports.forEach(report => {
 			const { date, name, time_in, time_out, is_overtime, overtime_hours } = report;
-			const formattedDate = new Date(date).toISOString().split('T')[0].slice(5);
-			const month = new Date(date).toLocaleString('default', { month: 'long', year: 'numeric' });
+			const parsedDate = new Date(date);
+			const formattedDate = parsedDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' });
+			const month = parsedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
 			if (!hours[month]) {
 				hours[month] = {};
