@@ -1,76 +1,34 @@
-import 'react-datepicker/dist/react-datepicker.css'; // Import the CSS for the date picker
-import "./App.css"
+import 'react-datepicker/dist/react-datepicker.css';
+import "./App.css";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { addDays, addHours, format, getDay, getHours, getMinutes, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
+import { addDays, addHours, format, getDay, getHours, getMinutes, isAfter, isBefore, parseISO } from 'date-fns';
+import { defaultSchedule, getDefaultWeather } from './utils/defaults';
 
 import ConfirmationModal from './components/ConfirmationModal';
 import DatePicker from 'react-datepicker';
+import { addToOfflineQueue } from './App';
+import { calculateHours } from './utils/dateTime';
 import { shift } from "@floating-ui/dom"; // Add this import
 import { supabase } from './supabaseClient';
 
-// Schedule object to determine default names based on day and time
-const defaultSchedule = {
-	'1': { // Monday
-		'00:00': 'Marty Wanless',
-		'08:00': 'Jason Earle',
-		'16:00': 'Colin Butcher',
-	},
-	'2': { // Tuesday
-		'00:00': 'Terry MacLaine',
-		'08:00': 'Jason Earle',
-		'16:00': 'Colin Butcher',
-	},
-	'3': { // Wednesday
-		'00:00': 'Terry MacLaine',
-		'08:00': 'Jason Earle',
-		'16:00': 'Matthew Murphy',
-	},
-	'4': { // Thursday
-		'00:00': 'Terry MacLaine',
-		'08:00': 'Jason Earle',
-		'16:00': 'Matthew Murphy',
-	},
-	'5': { // Friday
-		'00:00': 'Terry MacLaine',
-		'08:00': 'Jason Earle',
-		'16:00': 'Matthew Murphy',
-	},
-	'6': { // Saturday
-		'00:00': 'Marty Wanless',
-		'08:00': 'Manpreet Kaur',
-		'16:00': 'Matthew Murphy',
-	},
-	'0': { // Sunday
-		'00:00': 'Marty Wanless',
-		'08:00': 'Manpreet Kaur',
-		'16:00': 'Matthew Murphy',
-	},
-};
+interface Report {
+	date: string;
+	name: string;
+	weather: string;
+	time_in: string;
+	time_out: string;
+	details: string;
+	tasks: string | null;
+	is_overtime: boolean;
+	overtime_hours: number;
+	total_hours: number;
+	id: number;
+	created_at: string;
+	attempts?: number;
+}
 
-// default weather per month in Vancouver
-const vancouverWeather = {
-	January: "Rainy",
-	February: "Rainy",
-	March: "Rainy",
-	April: "Cloudy",
-	May: "Cloudy",
-	June: "Sunny",
-	July: "Sunny",
-	August: "Sunny",
-	September: "Cloudy",
-	October: "Rainy",
-	November: "Rainy",
-	December: "Rainy"
-};
-
-// Update the defaultWeather constant to be a function
-const getDefaultWeather = () => {
-	const month = new Date().toLocaleString('default', { month: 'long' });
-	return vancouverWeather[month as keyof typeof vancouverWeather];
-};
-
-const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }) => {
+const ReportForm: React.FC = () => {
 	const formRef = useRef<HTMLFormElement>(null);
 	const [date, setDate] = useState<Date | null>(new Date()); // for testing replace with e.g.: new Date(`2024-10-27T08:30`)
 	const [name, setName] = useState<string>(''); // Default name
@@ -79,7 +37,6 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 	const [timeOut, setTimeOut] = useState<string>('');
 	const [details, setDetails] = useState<string>('');
 	const [tasks, setTasks] = useState<Array<{ time: string; description: string }>>([{ time: '', description: '' }]);
-	const [overtime, setOvertime] = useState<boolean>(false);
 	const [overtimeHours, setOvertimeHours] = useState<number>(0);
 	const [otherName, setOtherName] = useState<string>('');
 	const [otherWeather, setOtherWeather] = useState<string>('');
@@ -177,7 +134,7 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 		localStorage.setItem('reportOvertimeHours', overtimeHours.toString());
 		localStorage.setItem('reportOtherName', otherName);
 		localStorage.setItem('reportOtherWeather', otherWeather);
-	}, [date, timeIn, timeOut, name, weather, details, tasks, overtime, overtimeHours, otherName, otherWeather]);
+	}, [date, timeIn, timeOut, name, weather, details, tasks, overtimeHours, otherName, otherWeather]);
 
 	useEffect(() => {
 		// Set the initial task time to the determined default timeIn value
@@ -268,83 +225,91 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 		setDate(newDate);
 	};
 
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [submissionEvent, setSubmissionEvent] = useState<React.FormEvent<HTMLFormElement> | null>(null);
+
 	const submitReport = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
-		// Validation
-		if (!date || !name || !weather || !timeIn || !timeOut) {
-			alert("Please fill in all required fields");
-			return;
-		}
+		if (isSubmitting) return;
 
-		// Filter out tasks with blank descriptions
 		const filteredTasks = tasks.filter(task => task.description.trim() !== '');
+		const vancouverTimestamp = format(date!, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
-		// Calculate hours worked
-		const hoursWorked = calculateHours(timeIn, timeOut);
+		const report: Report = {
+			id: Date.now(),
+			created_at: new Date().toISOString(),
+			date: vancouverTimestamp,
+			name: name === 'Other' ? otherName : name,
+			weather: weather === 'Other' ? otherWeather : weather,
+			time_in: timeIn,
+			time_out: timeOut,
+			details,
+			tasks: filteredTasks.length > 0 ? JSON.stringify(filteredTasks) : null,
+			is_overtime: overtimeHours > 0,
+			overtime_hours: overtimeHours,
+			total_hours: calculateHours(timeIn, timeOut),
+			attempts: 0
+		};
 
-		// Alert if overtime is unchecked but hours worked exceed 8
-		if (!overtimeHours && hoursWorked > 8) {
-			setShowOvertimeModal(true);
-			return;
-		}
+		try {
+			setIsSubmitting(true);
 
-		// Convert date to Vancouver timezone
-		const vancouverTimestamp = format(date, "yyyy-MM-dd'T'HH:mm:ssXXX");
+			// Validation
+			if (!date || !name || !weather || !timeIn || !timeOut) {
+				alert("Please fill in all required fields");
+				return;
+			}
 
-		const { data, error } = await supabase
-			.from('reports')
-			.insert([
-				{
-					date: vancouverTimestamp, // Store as timestamp with timezone
-					name: name === 'Other' ? otherName : name,
-					weather: weather === 'Other' ? otherWeather : weather,
-					time_in: timeIn,
-					time_out: timeOut,
-					details,
-					tasks: filteredTasks.length > 0 ? JSON.stringify(filteredTasks) : null, // Only include if there are tasks
-					is_overtime: overtimeHours > 0,
-					overtime_hours: overtimeHours,
-					total_hours: hoursWorked
+			// Calculate hours worked
+			const hoursWorked = calculateHours(timeIn, timeOut);
+
+			// Alert if overtime is unchecked but hours worked exceed 8
+			if (!overtimeHours && hoursWorked > 8) {
+				setSubmissionEvent(e);  // Store the event
+				setShowOvertimeModal(true);
+				return;
+			}
+
+			if (!navigator.onLine) {
+				try {
+					addToOfflineQueue(report);
+					alert('You are offline. Report saved and will be submitted when back online.');
+					resetForm();
+				} catch (error) {
+					alert(error instanceof Error ? error.message : 'Failed to save report offline');
 				}
-			]);
+				return;
+			}
 
-		if (!error) {
-			// Clear cache
-			localStorage.removeItem('reportDate');
-			localStorage.removeItem('reportTimeIn');
-			localStorage.removeItem('reportTimeOut');
-			localStorage.removeItem('reportName');
-			localStorage.removeItem('reportWeather');
-			localStorage.removeItem('reportDetails');
-			localStorage.removeItem('reportTasks');
-			localStorage.removeItem('reportOvertimeHours');
-			localStorage.removeItem('reportOtherName');
-			localStorage.removeItem('reportOtherWeather');
+			const { error } = await supabase.from('reports').insert([{
+				date: report.date,
+				name: report.name,
+				weather: report.weather,
+				time_in: report.time_in,
+				time_out: report.time_out,
+				details: report.details,
+				tasks: report.tasks,
+				is_overtime: report.is_overtime,
+				overtime_hours: report.overtime_hours,
+				total_hours: report.total_hours
+			}]);
 			
-			// Reset user modified fields
-			setUserModifiedFields({
-				timeIn: false,
-				timeOut: false,
-				name: false
-			});
+			if (error) throw error;
 			
-			// Reset form state values
-			setWeather(getDefaultWeather()); // Reset weather to default
-			setDetails(''); // Reset details
-			setTasks([{ time: '', description: '' }]); // Reset tasks
-			setOvertimeHours(0); // Reset overtime hours
-			setOtherName(''); // Reset other name
-			setOtherWeather(''); // Reset other weather
-			
-			// Reinitialize with defaults
-			initializeFormDefaults();
-			
+			resetForm();
 			alert('Report submitted successfully!');
-			onReportSubmit();
-		} else {
-			console.error('Error inserting report:', error);
-			alert('Failed to submit report. Please try again.');
+
+		} catch (error) {
+			console.error('Error submitting report:', error);
+			try {
+				addToOfflineQueue(report);
+				alert('Failed to submit report. Saved offline and will retry when connection is restored.');
+			} catch (queueError) {
+				alert(queueError instanceof Error ? queueError.message : 'Failed to save report offline');
+			}
+		} finally {
+			setIsSubmitting(false);
 		}
 	};
 
@@ -354,19 +319,6 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 		const nextHour = (hours + 1) % 24;
 		const nextTime = `${String(nextHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 		setTasks([...tasks, { time: nextTime, description: '' }]);
-	};
-
-	const calculateHours = (timeIn: string, timeOut: string): number => {
-		const [inHours, inMinutes] = timeIn.split(':').map(Number);
-		const [outHours, outMinutes] = timeOut.split(':').map(Number);
-
-		let totalMinutes = (outHours * 60 + outMinutes) - (inHours * 60 + inMinutes);
-
-		if (totalMinutes < 0) {
-			totalMinutes += 24 * 60;
-		}
-
-		return Number((totalMinutes / 60).toFixed(2));
 	};
 
 	useEffect(() => {
@@ -384,7 +336,39 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 			setIsOvertimeHighlighted(false);
 			setIsOvertimeAutoSet(false);
 		}
-	}, [timeIn, timeOut, overtime]);
+	}, [timeIn, timeOut]);
+
+	const resetForm = () => {
+		// Clear cache
+		localStorage.removeItem('reportDate');
+		localStorage.removeItem('reportTimeIn');
+		localStorage.removeItem('reportTimeOut');
+		localStorage.removeItem('reportName');
+		localStorage.removeItem('reportWeather');
+		localStorage.removeItem('reportDetails');
+		localStorage.removeItem('reportTasks');
+		localStorage.removeItem('reportOvertimeHours');
+		localStorage.removeItem('reportOtherName');
+		localStorage.removeItem('reportOtherWeather');
+		
+		// Reset user modified fields
+		setUserModifiedFields({
+			timeIn: false,
+			timeOut: false,
+			name: false
+		});
+		
+		// Reset form state values
+		setWeather(getDefaultWeather());
+		setDetails('');
+		setTasks([{ time: '', description: '' }]);
+		setOvertimeHours(0);
+		setOtherName('');
+		setOtherWeather('');
+		
+		// Reinitialize with defaults
+		initializeFormDefaults();
+	};
 
 	return (
 		<div className="report-form">
@@ -533,7 +517,9 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 					<button type="button" onClick={addTask} className="secondary-button">Add Task</button>
 				</div>
 				<div style={{ width: '100%', margin: 20 }}>
-					<button type="submit">Submit</button>
+					<button type="submit" disabled={isSubmitting}>
+						{isSubmitting ? 'Submitting...' : 'Submit'}
+					</button>
 				</div>
 			</form>
 
@@ -545,7 +531,7 @@ const ReportForm: React.FC<{ onReportSubmit: () => void }> = ({ onReportSubmit }
 				cancelText="Go back and add overtime hours"
 				onConfirm={async () => {
 					setShowOvertimeModal(false);
-					onReportSubmit();
+					if (submissionEvent) submitReport(submissionEvent);
 				}}
 				onCancel={() => {
 					setShowOvertimeModal(false);

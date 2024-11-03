@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { calculateHours, formatHoursDisplay } from './utils/dateTime';
 
 import { FaSpinner } from 'react-icons/fa';
 import { HoursTableReport } from './interfaces/Report';
-import { supabase } from './supabaseClient';
 
 interface DailyHourEntry {
 	regular: string;
@@ -24,10 +24,9 @@ interface TotalHours {
 	};
 }
 
-const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void }> = ({ reports, onRefresh }) => {
+const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = ({ reports, loading }) => {
 	const [dailyHours, setDailyHours] = useState<DailyHours>({});
 	const [names, setNames] = useState<string[]>([]);
-	const [loading, setLoading] = useState(true);
 
 	// Add ref for header and body
 	const tableRef = useRef<HTMLTableElement>(null);
@@ -60,8 +59,8 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 			const regularHours = Math.max(0, totalHours - (is_overtime ? overtime_hours : 0));
 
 			hours[month][formattedDate][name] = {
-				regular: formatHours(regularHours),
-				overtime: is_overtime ? formatHours(overtime_hours) : '0'
+				regular: formatHoursDisplay(regularHours),
+				overtime: is_overtime ? formatHoursDisplay(overtime_hours) : '0'
 			};
 
 			if (!totals[name]) {
@@ -74,13 +73,10 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 				overtimeCheck[name] = true;
 			}
 		});
-
-		const processedDates = Array.from(uniqueDates).sort().reverse();
 		const processedNames = Array.from(uniqueNames).sort();
 
 		setDailyHours(hours);
 		setNames(processedNames);
-		setLoading(false);
 	};
 
 	useEffect(() => {
@@ -151,10 +147,7 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 
 	return (
 		<div className="page-container">
-					<button onClick={onRefresh} className="secondary-button" style={{ maxWidth: '300px' }}>
-						Refresh Data
-					</button>
-					<h1>Hours Worked</h1>
+			<h1>Hours Worked</h1>
 			<div className="table-content">
 				{loading ? (
 					<div className="loading-spinner">
@@ -225,11 +218,11 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 													{activeNames.map(name => (
 														<React.Fragment key={`monthly-total-${name}`}>
 															<td className="total-cell hours-column">
-																{formatHours(monthlyTotals[name]?.regular || 0)}
+																{formatHoursDisplay(monthlyTotals[name]?.regular || 0)}
 															</td>
 															{monthlyOvertime[name] && (
 																<td className="total-cell hours-column">
-																	{formatHours(monthlyTotals[name]?.overtime || 0)}
+																	{formatHoursDisplay(monthlyTotals[name]?.overtime || 0)}
 																</td>
 															)}
 														</React.Fragment>
@@ -247,25 +240,6 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], onRefresh: () => void 
 			</div>
 		</div>
 	);
-};
-
-const calculateHours = (timeIn: string, timeOut: string): number => {
-	const [inHours, inMinutes] = timeIn.split(':').map(Number);
-	const [outHours, outMinutes] = timeOut.split(':').map(Number);
-
-	let totalMinutes = (outHours * 60 + outMinutes) - (inHours * 60 + inMinutes);
-
-	if (totalMinutes < 0) {
-		totalMinutes += 24 * 60;
-	}
-
-	return totalMinutes / 60;
-};
-
-const formatHours = (hours: number): string => {
-	const wholeHours = Math.floor(hours);
-	const minutes = Math.round((hours - wholeHours) * 60);
-	return minutes === 0 ? `${wholeHours}` : `${wholeHours}.${minutes.toString().padStart(2, '0')}`;
 };
 
 export default HoursTable;

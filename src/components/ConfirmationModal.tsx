@@ -4,22 +4,24 @@ interface ConfirmationModalProps {
   isOpen: boolean;
   title: string;
   message: string;
-  confirmText: string;
-  cancelText: string;
-  onConfirm: () => void;
-  onCancel: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  onConfirm?: () => void;
+  onCancel?: () => void;
   isDanger?: boolean;
+  isSuccess?: boolean;
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isOpen,
   title,
   message,
-  confirmText,
+  confirmText = "OK",
   cancelText,
   onConfirm,
   onCancel,
   isDanger = false,
+  isSuccess = false,
 }) => {
   if (!isOpen) return null;
 
@@ -30,17 +32,19 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <p>{message}</p>
         <div className="modal-buttons">
           <button 
-            onClick={onConfirm}
-            className={`secondary-button ${isDanger ? 'danger' : ''}`}
+            onClick={onConfirm || onCancel}
+            className={`primary-button ${isDanger ? 'danger' : ''} ${isSuccess ? 'success' : ''}`}
           >
             {confirmText}
           </button>
-          <button 
-            onClick={onCancel}
-            className="primary-button"
-          >
-            {cancelText}
-          </button>
+          {cancelText && onCancel && (
+            <button 
+              onClick={onCancel}
+              className="secondary-button"
+            >
+              {cancelText}
+            </button>
+          )}
         </div>
       </div>
     </div>
