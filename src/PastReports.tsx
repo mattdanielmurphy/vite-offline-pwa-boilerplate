@@ -40,7 +40,7 @@ const PastReports: React.FC<{ reports: Report[], loading: boolean, onRefresh: ()
 										<td style={labelStyle}>Overtime:</td>
 										<td style={cellStyle}>
 											{report.is_overtime
-												? `Yes (${formatOvertimeHours(report.overtime_hours)})`
+												? `Yes (${report.overtime_hours}h)`
 												: 'No'}
 										</td>
 									</tr>
@@ -105,10 +105,6 @@ const formatTime = (timeString: string) => {
 	const ampm = hours >= 12 ? 'pm' : 'am';
 	const formattedHours = hours % 12 || 12;
 	return minutes === 0 ? `${formattedHours}${ampm}` : `${formattedHours}:${minutes.toString().padStart(2, '0')}${ampm}`;
-};
-
-const formatOvertimeHours = (hours: number) => {
-	return hours === 1 ? '1 hour' : `${hours} hours`;
 };
 
 const calculateHours = (timeIn: string, timeOut: string) => {
