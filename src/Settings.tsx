@@ -2,6 +2,7 @@ import { FaChevronDown, FaSpinner, FaTrashAlt } from 'react-icons/fa';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import ConfirmationModal from './components/ConfirmationModal';
+import { DEV_CONFIG } from './src/config';
 import { isValidEmail } from './utils/validation';
 import { supabase } from './supabaseClient';
 
@@ -176,6 +177,7 @@ const Settings: React.FC = () => {
 
   // Add cache-related functions
   const saveToCache = useCallback((data: EmailSetting[]) => {
+    if (DEV_CONFIG.DISABLE_CACHING) return;
     const cacheData: CachedData = {
       data,
       timestamp: Date.now()
@@ -184,6 +186,7 @@ const Settings: React.FC = () => {
   }, []);
 
   const getFromCache = useCallback((): EmailSetting[] | null => {
+    if (DEV_CONFIG.DISABLE_CACHING) return null;
     const cached = localStorage.getItem(CACHE_KEY);
     if (!cached) return null;
 
@@ -192,7 +195,6 @@ const Settings: React.FC = () => {
       localStorage.removeItem(CACHE_KEY);
       return null;
     }
-
     return data;
   }, []);
 
