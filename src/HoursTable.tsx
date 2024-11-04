@@ -32,18 +32,25 @@ const debounce = (func: Function, wait: number) => {
 	};
 };
 
+const clampScroll = (scrollX: number, tableWidth: number) => {
+	const viewportWidth = window.innerWidth;
+	const maxScroll = Math.max(0, tableWidth - viewportWidth + 72);
+	return Math.min(Math.max(0, scrollX), maxScroll);
+};
+
 const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = ({ reports, loading }) => {
 	const [dailyHours, setDailyHours] = useState<DailyHours>({});
 	const [names, setNames] = useState<string[]>([]);
-	const [monthLabelWidth, setMonthLabelWidth] = useState(0);
-	const [showFloatingHeader, setShowFloatingHeader] = useState<string | null>(null);
-	const [headerTop, setHeaderTop] = useState(0);
 	const [currentMonth, setCurrentMonth] = useState<string | null>(null);
 	const [scrollX, setScrollX] = useState(0);
 
-	// Add ref for header and body
-	const tableRef = useRef<HTMLTableElement>(null);
 	const spacerRef = useRef<HTMLDivElement>(null);
+
+	// Add a ref map for tables
+	const tableRefs = useRef<{ [month: string]: HTMLTableElement | null }>({});
+
+	// Add ref for measuring text widths
+	const monthTextRefs = useRef<{ [month: string]: HTMLHeadingElement | null }>({});
 
 	const processReports = (reports: HoursTableReport[]) => {
 		const hours: DailyHours = {};
@@ -146,7 +153,7 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 		});
 
 		// Set spacer width based on widest table
-		spacerRef.current.style.width = `${maxWidth + 30}px`;
+		spacerRef.current.style.width = `${maxWidth + 20}px`;
 		spacerRef.current.style.height = '1px';
 		spacerRef.current.style.display = 'block';
 	}, []);
@@ -158,31 +165,6 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 		return () => window.removeEventListener('resize', updateSpacerWidth);
 	}, [dailyHours, updateSpacerWidth]);
 
-	// Add function to update month label width
-	const updateMonthLabelWidth = useCallback(() => {
-		const width = document.documentElement.scrollWidth;
-		setMonthLabelWidth(width);
-	}, []);
-
-	// Add effect to handle width updates and observe changes
-	useEffect(() => {
-		// Initial update
-		updateMonthLabelWidth();
-
-		// Create ResizeObserver to watch for content width changes
-		const resizeObserver = new ResizeObserver(() => {
-			updateMonthLabelWidth();
-		});
-
-		// Observe the HTML element
-		resizeObserver.observe(document.documentElement);
-
-		// Clean up
-		return () => {
-			resizeObserver.disconnect();
-		};
-	}, [updateMonthLabelWidth]);
-
 	// Track scroll position and update current month
 	useEffect(() => {
 		let lastScrollY = window.scrollY;
@@ -193,12 +175,6 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 				const scrollingDown = currentScrollY > lastScrollY;
 				const monthHeaders = document.querySelectorAll('.month-section');
 				
-				// Base threshold for when headers are "active"
-				const threshold = 50;
-				
-				// Additional offsets for direction
-				const downOffset = 0;
-				const upOffset = 0;
 				
 				let visibleHeader: Element | null = null;
 				
@@ -208,12 +184,12 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 					const month = header.getAttribute('data-month');
 					
 					if (scrollingDown) {
-						if (rect.top <= downOffset && rect.bottom > 0 && month) {
+						if (rect.top <= 0 && rect.bottom > 30 && month) {
 							visibleHeader = header;
 							break;
 						}
 					} else {
-						if (rect.top <= upOffset && rect.bottom > 0 && month) {
+						if (rect.top <= 0 && rect.bottom > 0 && month) {
 							visibleHeader = header;
 							break;
 						}
@@ -228,7 +204,7 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 					const firstHeader = monthHeaders[0];
 					if (firstHeader) {
 						const firstRect = firstHeader.getBoundingClientRect();
-						if (firstRect.top > upOffset) {
+						if (firstRect.top > 0) {
 							setCurrentMonth(null);
 						}
 					}
@@ -246,10 +222,70 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 		return () => window.removeEventListener('scroll', debouncedScroll);
 	}, []);
 
+	useEffect(() => {
+		let ticking = false;
+		let lastKnownScrollX = window.scrollX;
+		
+		const updateTransform = () => {
+			if (currentMonth && tableRefs.current[currentMonth]) {
+				const table = tableRefs.current[currentMonth];
+				const clampedScroll = clampScroll(lastKnownScrollX, table?.offsetWidth || 0);
+			}
+			ticking = false;
+		};
+
+		const onScroll = () => {
+			lastKnownScrollX = window.scrollX;
+			if (!ticking) {
+				requestAnimationFrame(updateTransform);
+				ticking = true;
+			}
+		};
+
+		window.addEventListener('scroll', onScroll, { passive: true });
+		return () => window.removeEventListener('scroll', onScroll);
+	}, [currentMonth]);
+
+	// Update the table widths when content changes
+	useEffect(() => {
+		const updateTableWidths = () => {
+			const newWidths: { [month: string]: number } = {};
+			const tables = document.querySelectorAll('.month-section');
+			
+			tables.forEach(section => {
+				const month = section.getAttribute('data-month');
+				const table = section.querySelector('.hours-table');
+				if (month && table instanceof HTMLElement) {
+					newWidths[month] = table.offsetWidth;
+				}
+			});
+		};
+
+		updateTableWidths();
+		window.addEventListener('resize', updateTableWidths);
+		return () => window.removeEventListener('resize', updateTableWidths);
+	}, [dailyHours, names]);
+
+	// Add function to get widest table width
+	const getWidestTableWidth = () => {
+		let maxWidth = 0;
+		Object.values(tableRefs.current).forEach(table => {
+			if (table) {
+				maxWidth = Math.max(maxWidth, table.offsetWidth);
+			}
+		});
+		return maxWidth;
+	};
+
 	return (
 		<div className="page-container">
-			<h1>Hours Worked</h1>
-			{/* Fixed header */}
+			<h1 style={{
+				transform: `translateX(${clampScroll(scrollX, getWidestTableWidth())}px)`,
+				willChange: 'transform',
+				textAlign: 'left',
+			}}>
+				Hours Worked
+			</h1>
 			{currentMonth && (
 				<div style={{
 					position: 'fixed',
@@ -257,12 +293,25 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 					top: 0,
 					right: 0,
 					background: 'var(--bg-color)',
-					padding: '18px 0 0 72px',
-					zIndex: 1000,
-					borderRadius: '4px',
+					padding: '18px 0 0 28px',
+					zIndex: 999,
 					lineHeight: '.5',
+					textAlign: 'left'
 				}}>
-					<h2>{currentMonth}</h2>
+					<h2 style={{ 
+						display: 'inline-block', 
+						width: 'auto',
+						transform: currentMonth && tableRefs.current[currentMonth] && 
+							scrollX >= (tableRefs.current[currentMonth]?.offsetWidth || 0) + 
+										(window.innerWidth - (monthTextRefs.current[currentMonth]?.offsetWidth || 0) - 72) - 
+										window.innerWidth + 72
+							? `translateX(-${scrollX - ((tableRefs.current[currentMonth]?.offsetWidth || 0) + 
+														(window.innerWidth - (monthTextRefs.current[currentMonth]?.offsetWidth || 0) - 72) - 
+														window.innerWidth + 72)}px)`
+							: 'none'
+					}}>
+						{currentMonth}
+					</h2>
 				</div>
 			)}
 			<div className="table-content">
@@ -276,83 +325,106 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 							const { totals: monthlyTotals, hasOvertime: monthlyOvertime } = calculateMonthlyTotals(month);
 							const activeNames = getPeopleWithHoursForMonth(month, names);
 							
+							const thisTableWidth = tableRefs.current[month]?.offsetWidth || 0;
+							const monthTextWidth = monthTextRefs.current[month]?.offsetWidth || 0;
+							
+							const adjustedWidth = thisTableWidth + (window.innerWidth - monthTextWidth - 72);
+							const thisMonthClamp = clampScroll(scrollX, adjustedWidth);
+
+							// Calculate if this month's header should be hidden - using same logic as fixed header
+							const shouldHideHeader = month === currentMonth
+							
 							return (
 								<div key={month} className="month-section" data-month={month}>
 									<div className="month-label" style={{ 
-										width: `${monthLabelWidth}px`,
+										width: '100%',
 										position: 'relative',
-										transform: `translateX(${scrollX}px)`,
-										willChange: 'transform'
+										transform: `translateX(${thisMonthClamp}px)`,
+										willChange: 'transform',
+										textAlign: 'left',
+										zIndex: month === currentMonth ? 999 : 1000,
+										opacity: shouldHideHeader ? 0 : 1,
+										// transition: 'opacity 0.1s'
 									}}>
-										<h2>{month}</h2>
+										<h2 
+											ref={el => monthTextRefs.current[month] = el}
+											style={{ display: 'inline-block', width: 'auto' }}
+											>
+											{month}
+										</h2>
 									</div>
-									<div className="table-container" style={{ maxWidth: '800px', margin: '0 auto' }}>
-										<table ref={tableRef} className="hours-table">
-											<thead>
-												<tr>
-													<th className="header-cell date-column" rowSpan={2}>Date</th>
-													{activeNames.map(name => (
-														<th key={name} 
-															className="header-cell" 
-															colSpan={monthlyOvertime[name] ? 2 : 1}
-															rowSpan={monthlyOvertime[name] ? 1 : 2}>
-															{name}
-														</th>
-													))}
-												</tr>
-												{Object.values(monthlyOvertime).some(hasOT => hasOT) && (
+									<div>
+										<div className="table-container" style={{ maxWidth: '800px', margin: '0 auto' }}>
+											<table 
+												ref={el => tableRefs.current[month] = el} 
+												className="hours-table"
+											>
+												<thead>
 													<tr>
+														<th className="header-cell date-column" rowSpan={2}>Date</th>
 														{activeNames.map(name => (
-															<React.Fragment key={`subheader-${name}`}>
-																{monthlyOvertime[name] && (
-																	<>
-																		<th className="sub-header-cell hours-column">Reg</th>
-																		<th className="sub-header-cell hours-column">OT</th>
-																	</>
-																)}
-															</React.Fragment>
+															<th key={name} 
+																className="header-cell" 
+																colSpan={monthlyOvertime[name] ? 2 : 1}
+																rowSpan={monthlyOvertime[name] ? 1 : 2}>
+																{name}
+															</th>
 														))}
 													</tr>
-												)}
-											</thead>
-											<tbody>
-												{Object.keys(dailyHours[month]).map(date => (
-													<tr key={date}>
-														<td className="table-cell date-column">{date}</td>
+													{Object.values(monthlyOvertime).some(hasOT => hasOT) && (
+														<tr>
+															{activeNames.map(name => (
+																<React.Fragment key={`subheader-${name}`}>
+																	{monthlyOvertime[name] && (
+																		<>
+																			<th className="sub-header-cell hours-column">Reg</th>
+																			<th className="sub-header-cell hours-column">OT</th>
+																		</>
+																	)}
+																</React.Fragment>
+															))}
+														</tr>
+													)}
+												</thead>
+												<tbody>
+													{Object.keys(dailyHours[month]).map(date => (
+														<tr key={date}>
+															<td className="table-cell date-column">{date}</td>
+															{activeNames.map(name => (
+																<React.Fragment key={`${date}-${name}`}>
+																	<td className="table-cell hours-column">
+																		{(dailyHours[month][date]?.[name] as DailyHourEntry)?.regular || '-'}
+																	</td>
+																	{monthlyOvertime[name] && (
+																		<td className="table-cell hours-column">
+																			{(dailyHours[month][date]?.[name] as DailyHourEntry)?.overtime !== '0' 
+																				? (dailyHours[month][date]?.[name] as DailyHourEntry)?.overtime 
+																				: '-'}
+																		</td>
+																	)}
+																</React.Fragment>
+															))}
+														</tr>
+													))}
+													<tr>
+														<td className="total-cell date-column">Total</td>
 														{activeNames.map(name => (
-															<React.Fragment key={`${date}-${name}`}>
-																<td className="table-cell hours-column">
-																	{(dailyHours[month][date]?.[name] as DailyHourEntry)?.regular || '-'}
+															<React.Fragment key={`monthly-total-${name}`}>
+																<td className="total-cell hours-column">
+																	{formatHoursDisplay(monthlyTotals[name]?.regular || 0)}
 																</td>
 																{monthlyOvertime[name] && (
-																	<td className="table-cell hours-column">
-																		{(dailyHours[month][date]?.[name] as DailyHourEntry)?.overtime !== '0' 
-																			? (dailyHours[month][date]?.[name] as DailyHourEntry)?.overtime 
-																			: '-'}
+																	<td className="total-cell hours-column">
+																		{formatHoursDisplay(monthlyTotals[name]?.overtime || 0)}
 																	</td>
 																)}
 															</React.Fragment>
 														))}
 													</tr>
-												))}
-												<tr>
-													<td className="total-cell date-column">Total</td>
-													{activeNames.map(name => (
-														<React.Fragment key={`monthly-total-${name}`}>
-															<td className="total-cell hours-column">
-																{formatHoursDisplay(monthlyTotals[name]?.regular || 0)}
-															</td>
-															{monthlyOvertime[name] && (
-																<td className="total-cell hours-column">
-																	{formatHoursDisplay(monthlyTotals[name]?.overtime || 0)}
-																</td>
-															)}
-														</React.Fragment>
-													))}
-												</tr>
-											</tbody>
-										</table>
-										<div ref={spacerRef} className="table-spacer"></div>
+												</tbody>
+											</table>
+											<div ref={spacerRef} className="table-spacer"></div>
+										</div>
 									</div>
 								</div>
 							);

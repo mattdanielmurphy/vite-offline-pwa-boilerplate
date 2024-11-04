@@ -533,8 +533,7 @@ h2 {
 }
 
 .month-section {
-	margin-bottom: 2rem;
-	border-radius: 4px;
+	margin-bottom: 15px;
 }
 
 .month-label {
@@ -546,7 +545,7 @@ h2 {
 	padding-top: 10px;
 	background: var(--bg-color);
 	width: 100%;
-	margin-top: -20px;
+	/* margin-top: -20px; */
 }
 
 .month-label h2,
@@ -579,12 +578,6 @@ thead {
 
 .total-cell {
 	font-weight: bold;
-}
-
-@media (max-width: 768px) {
-	.table-content {
-		/* top: 100px; */
-	}
 }
 
 .table-content {
