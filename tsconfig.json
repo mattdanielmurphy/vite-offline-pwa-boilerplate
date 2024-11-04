@@ -23,8 +23,10 @@
   },
   "include": [
     "src",
-    "api/**/*.ts",
-    "config/**/*.ts"
+    "api/**/*.ts"
+  ],
+  "exclude": [
+    "config"
   ],
   "references": [
     {
