@@ -2,7 +2,7 @@ import { FaChevronDown, FaSpinner, FaTrashAlt } from 'react-icons/fa';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import ConfirmationModal from './components/ConfirmationModal';
-import { DEV_CONFIG } from './config';
+import { DEV_CONFIG } from '../config';
 import { isValidEmail } from './utils/validation';
 import { supabase } from './supabaseClient';
 

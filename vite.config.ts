@@ -1,4 +1,4 @@
-import { DEV_CONFIG } from "./src/config"
+import { DEV_CONFIG } from "./config"
 import { VitePWA } from "vite-plugin-pwa"
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
