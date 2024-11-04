@@ -1,5 +1,6 @@
-import { FaExclamationTriangle, FaWifi } from 'react-icons/fa';
 import React, { useEffect, useState } from 'react';
+
+import { FaExclamationTriangle } from 'react-icons/fa';
 
 const ConnectionStatus: React.FC = () => {
     const [isOnline, setIsOnline] = useState(navigator.onLine);
