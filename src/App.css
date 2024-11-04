@@ -177,6 +177,8 @@ label {
 @media (display-mode: standalone) {
 	.mobile-nav {
 		padding-bottom: env(safe-area-inset-bottom, 20px);
+		/* Add support for older iOS versions */
+		padding-bottom: constant(safe-area-inset-bottom, 20px);
 	}
 }
 
