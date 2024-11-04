@@ -24,10 +24,22 @@ interface TotalHours {
 	};
 }
 
+const debounce = (func: Function, wait: number) => {
+	let timeout: NodeJS.Timeout;
+	return (...args: any[]) => {
+		clearTimeout(timeout);
+		timeout = setTimeout(() => func(...args), wait);
+	};
+};
+
 const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = ({ reports, loading }) => {
 	const [dailyHours, setDailyHours] = useState<DailyHours>({});
 	const [names, setNames] = useState<string[]>([]);
 	const [monthLabelWidth, setMonthLabelWidth] = useState(0);
+	const [showFloatingHeader, setShowFloatingHeader] = useState<string | null>(null);
+	const [headerTop, setHeaderTop] = useState(0);
+	const [currentMonth, setCurrentMonth] = useState<string | null>(null);
+	const [scrollX, setScrollX] = useState(0);
 
 	// Add ref for header and body
 	const tableRef = useRef<HTMLTableElement>(null);
@@ -148,20 +160,111 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 
 	// Add function to update month label width
 	const updateMonthLabelWidth = useCallback(() => {
-		const width = document.documentElement.clientWidth;
+		const width = document.documentElement.scrollWidth;
 		setMonthLabelWidth(width);
 	}, []);
 
-	// Add effect to handle width updates
+	// Add effect to handle width updates and observe changes
 	useEffect(() => {
+		// Initial update
 		updateMonthLabelWidth();
-		window.addEventListener('resize', updateMonthLabelWidth);
-		return () => window.removeEventListener('resize', updateMonthLabelWidth);
+
+		// Create ResizeObserver to watch for content width changes
+		const resizeObserver = new ResizeObserver(() => {
+			updateMonthLabelWidth();
+		});
+
+		// Observe the HTML element
+		resizeObserver.observe(document.documentElement);
+
+		// Clean up
+		return () => {
+			resizeObserver.disconnect();
+		};
 	}, [updateMonthLabelWidth]);
+
+	// Track scroll position and update current month
+	useEffect(() => {
+		let lastScrollY = window.scrollY;
+		
+		const handleScroll = () => {
+			requestAnimationFrame(() => {
+				const currentScrollY = window.scrollY;
+				const scrollingDown = currentScrollY > lastScrollY;
+				const monthHeaders = document.querySelectorAll('.month-section');
+				
+				// Base threshold for when headers are "active"
+				const threshold = 50;
+				
+				// Additional offsets for direction
+				const downOffset = 0;
+				const upOffset = 0;
+				
+				let visibleHeader: Element | null = null;
+				
+				// Find the first header that's in the threshold zone
+				for (const header of monthHeaders) {
+					const rect = header.getBoundingClientRect();
+					const month = header.getAttribute('data-month');
+					
+					if (scrollingDown) {
+						if (rect.top <= downOffset && rect.bottom > 0 && month) {
+							visibleHeader = header;
+							break;
+						}
+					} else {
+						if (rect.top <= upOffset && rect.bottom > 0 && month) {
+							visibleHeader = header;
+							break;
+						}
+					}
+				}
+
+				// If we found a visible header, show it
+				if (visibleHeader) {
+					setCurrentMonth(visibleHeader.getAttribute('data-month'));
+				} else {
+					// No headers near threshold, check if we're above all headers
+					const firstHeader = monthHeaders[0];
+					if (firstHeader) {
+						const firstRect = firstHeader.getBoundingClientRect();
+						if (firstRect.top > upOffset) {
+							setCurrentMonth(null);
+						}
+					}
+				}
+
+				lastScrollY = currentScrollY;
+				setScrollX(window.scrollX);
+			});
+		};
+
+		const debouncedScroll = debounce(handleScroll, 5);
+		
+		window.addEventListener('scroll', debouncedScroll, { passive: true });
+		
+		return () => window.removeEventListener('scroll', debouncedScroll);
+	}, []);
 
 	return (
 		<div className="page-container">
 			<h1>Hours Worked</h1>
+			{/* Fixed header */}
+			{currentMonth && (
+				<div style={{
+					position: 'fixed',
+					left: 0,
+					top: 0,
+					right: 0,
+					background: 'var(--bg-color)',
+					padding: '18px 0 0 72px',
+					zIndex: 1000,
+					borderRadius: '4px',
+					lineHeight: '.5',
+				}}>
+					<h2>{currentMonth}</h2>
+				</div>
+			)}
 			<div className="table-content">
 				{loading ? (
 					<div className="loading-spinner">
@@ -174,8 +277,13 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 							const activeNames = getPeopleWithHoursForMonth(month, names);
 							
 							return (
-								<div key={month} className="month-section">
-									<div className="month-label" style={{ width: `${monthLabelWidth}px` }}>
+								<div key={month} className="month-section" data-month={month}>
+									<div className="month-label" style={{ 
+										width: `${monthLabelWidth}px`,
+										position: 'relative',
+										transform: `translateX(${scrollX}px)`,
+										willChange: 'transform'
+									}}>
 										<h2>{month}</h2>
 									</div>
 									<div className="table-container" style={{ maxWidth: '800px', margin: '0 auto' }}>
