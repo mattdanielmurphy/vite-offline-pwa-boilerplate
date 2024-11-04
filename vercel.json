@@ -18,9 +18,6 @@
             ]
         }
     ],
-    "TODO_REMOVE_BEFORE_PROD": {
-        "note": "These headers disable caching - remove before production"
-    },
     "crons": [
         {
             "path": "/api/send-scheduled-reports",
