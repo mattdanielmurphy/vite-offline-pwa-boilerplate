@@ -123,7 +123,7 @@ const App: React.FC = () => {
 	});
 
 	const DEV_CONFIG = {
-		DISABLE_CACHING: process.env.REACT_APP_DISABLE_CACHING === 'true'
+		DISABLE_CACHING: import.meta.env.VITE_DISABLE_CACHING === 'true'
 	};
 
 	const fetchReports = async () => {
@@ -241,7 +241,7 @@ const App: React.FC = () => {
 
 	const processOfflineQueue = async () => {
 		if (isProcessingQueue) {
-			if (process.env.NODE_ENV === 'development') {
+			if (import.meta.env.MODE === 'development') {
 				console.log('Already processing queue, skipping');
 			}
 			return;

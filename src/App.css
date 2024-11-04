@@ -134,6 +134,8 @@ body {
 }
 
 .mobile-nav {
+	box-sizing: initial;
+	padding-bottom: 5px;
 	display: flex !important;
 }
 
