@@ -2,7 +2,7 @@ import './App.css';
 
 import { FaClipboardList, FaClock, FaCog, FaHistory } from 'react-icons/fa';
 import { Link, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import ConfirmationModal from './components/ConfirmationModal';
 import ConnectionStatus from './components/ConnectionStatus';
@@ -15,6 +15,9 @@ import { supabase } from './supabaseClient';
 const OFFLINE_QUEUE_KEY = 'offlineReportQueue';
 const MAX_QUEUE_ATTEMPTS = 3;
 const MAX_QUEUE_SIZE = 50;
+const CACHE_KEY = 'reports_cache';
+const CACHE_TIMESTAMP_KEY = 'reports_cache_timestamp';
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 interface Report {
 	id?: number;
@@ -116,7 +119,6 @@ const App: React.FC = () => {
 	const [loadingReports, setLoadingReports] = useState(true); // Loading state for reports
 	const [sortedReports, setSortedReports] = useState<any[]>([]); // Add this state
 	const [isProcessingQueue, setIsProcessingQueue] = useState(false);
-	const lastSubmissionTimeRef = useRef(0);
 	const [successModal, setSuccessModal] = useState({
 		isOpen: false,
 		message: ''
@@ -126,8 +128,38 @@ const App: React.FC = () => {
 		DISABLE_CACHING: import.meta.env.VITE_DISABLE_CACHING === 'true'
 	};
 
+	const getCachedReports = () => {
+		const cached = localStorage.getItem(CACHE_KEY);
+		const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+		
+		if (!cached || !timestamp) return null;
+		
+		// Check if cache is expired
+		if (Date.now() - Number(timestamp) > CACHE_DURATION) {
+			localStorage.removeItem(CACHE_KEY);
+			localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+			return null;
+		}
+		
+		return JSON.parse(cached);
+	};
+
+	const setCachedReports = (reports: any[]) => {
+		localStorage.setItem(CACHE_KEY, JSON.stringify(reports));
+		localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+	};
+
 	const fetchReports = async () => {
 		console.log('fetch reports');
+		
+		// First check cache
+		const cachedData = getCachedReports();
+		if (cachedData) {
+			console.log('Using cached data');
+			setReports(cachedData);
+			setLoadingReports(false);
+			return;
+		}
 
 		setLoadingReports(true);
 		const { data, error } = await supabase
@@ -138,7 +170,9 @@ const App: React.FC = () => {
 		if (error) {
 			console.error('Error fetching reports:', error);
 		} else {
-			setReports(data ? data : []);
+			const reportsData = data ? data : [];
+			setReports(reportsData);
+			setCachedReports(reportsData);
 		}
 		setLoadingReports(false);
 	};
@@ -182,7 +216,11 @@ const App: React.FC = () => {
 				},
 				(payload) => {
 					console.log('New report added!', payload);
-					setReports(currentReports => [...currentReports, payload.new]);
+					setReports(currentReports => {
+						const newReports = [...currentReports, payload.new];
+						setCachedReports(newReports);
+						return newReports;
+					});
 				}
 			)
 			.on(
@@ -194,11 +232,13 @@ const App: React.FC = () => {
 				},
 				(payload) => {
 					console.log('Report updated!', payload);
-					setReports(currentReports => 
-						currentReports.map(report => 
+					setReports(currentReports => {
+						const newReports = currentReports.map(report => 
 							report.id === payload.new.id ? payload.new : report
-						)
-					);
+						);
+						setCachedReports(newReports);
+						return newReports;
+					});
 				}
 			)
 			.on(
@@ -210,9 +250,11 @@ const App: React.FC = () => {
 				},
 				(payload) => {
 					console.log('Report deleted!', payload);
-					setReports(currentReports => 
-						currentReports.filter(report => report.id !== payload.old.id)
-					);
+					setReports(currentReports => {
+						const newReports = currentReports.filter(report => report.id !== payload.old.id);
+						setCachedReports(newReports);
+						return newReports;
+					});
 				}
 			)
 			.subscribe();
@@ -333,7 +375,7 @@ const App: React.FC = () => {
 			<div style={{ maxWidth: '1200px', margin: '0 auto' }} className={isDarkMode ? 'dark-mode' : ''}>
 				<ConnectionStatus />
 				<Navigation isDarkMode={isDarkMode} />
-				<div id='content' style={{ paddingTop: '20px', paddingBottom: '90px' }}>
+				<div id='content' style={{ paddingTop: '20px', paddingBottom: '900px' }}>
 					<Routes>
 						<Route path="/" element={<ReportForm />} />
 						<Route 
@@ -400,7 +442,7 @@ const mobileNavStyle = (isDarkMode: boolean): React.CSSProperties => ({
 	backgroundColor: isDarkMode ? '#1C1C1E' : '#f8f8f8',
 	borderTop: `1px solid ${isDarkMode ? '#38383A' : '#e7e7e7'}`,
 	height: '70px',
-	zIndex: 1000,
+	zIndex: 9999,
 });
 
 const mobileLinkStyle = (isActive: boolean, isDarkMode: boolean): React.CSSProperties => ({
