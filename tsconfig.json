@@ -24,7 +24,7 @@
   "include": [
     "src",
     "api/**/*.ts",
-    "config/config.ts"
+    "config/**/*.ts"
   ],
   "references": [
     {
