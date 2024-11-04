@@ -2,7 +2,6 @@ import { FaChevronDown, FaSpinner, FaTrashAlt } from 'react-icons/fa';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import ConfirmationModal from './components/ConfirmationModal';
-import { DEV_CONFIG } from '../config';
 import { isValidEmail } from './utils/validation';
 import { supabase } from './supabaseClient';
 
@@ -177,7 +176,7 @@ const Settings: React.FC = () => {
 
   // Add cache-related functions
   const saveToCache = useCallback((data: EmailSetting[]) => {
-    if (DEV_CONFIG.DISABLE_CACHING) return;
+    if (import.meta.env.VITE_DISABLE_CACHING === 'true') return;
     const cacheData: CachedData = {
       data,
       timestamp: Date.now()
@@ -186,7 +185,7 @@ const Settings: React.FC = () => {
   }, []);
 
   const getFromCache = useCallback((): EmailSetting[] | null => {
-    if (DEV_CONFIG.DISABLE_CACHING) return null;
+    if (import.meta.env.VITE_DISABLE_CACHING === 'true') return null;
     const cached = localStorage.getItem(CACHE_KEY);
     if (!cached) return null;
 
@@ -277,67 +276,6 @@ const Settings: React.FC = () => {
     updatedSettings[index].modified = true;
     setEmailSettings(updatedSettings);
     setChangesMade(true);
-  };
-
-  const handleEmailChange = (index: number, value: string) => {
-    const updatedSettings = [...emailSettings];
-    
-    // Check for duplicate email (case insensitive)
-    const isDuplicate = emailSettings.some((setting, i) => 
-      i !== index && 
-      setting.address.toLowerCase() === value.toLowerCase() &&
-      !setting.pendingDeletion
-    );
-    
-    if (isDuplicate) {
-      setNotification('This email address already exists.');
-      return;
-    }
-    
-    updatedSettings[index].address = value;
-    updatedSettings[index].modified = true;
-    setEmailSettings(updatedSettings);
-    setChangesMade(true);
-  };
-
-  const handleEmailBlur = (index: number) => {
-    const updatedSettings = [...emailSettings];
-    updatedSettings[index].touched = true;
-    setEmailSettings(updatedSettings);
-    
-    // Only show validation message if email is invalid after blur
-    if (!isValidEmail(updatedSettings[index].address)) {
-      setNotification('Please enter a valid email address.');
-    } else if (notification === 'Please enter a valid email address.') {
-      setNotification(null);
-    }
-  };
-
-  const handleAddEmail = () => {
-    const newEmailSetting: EmailSetting = { 
-      address: '', 
-      frequency: 'weekly', 
-      enabled: true,
-      modified: true,
-      isNew: true 
-    };
-    
-    // Add the new email and expand it
-    setEmailSettings([...emailSettings, newEmailSetting]);
-    setChangesMade(true);
-    
-    // Expand the new email (it will be at the last index)
-    const newIndex = emailSettings.length;
-    setExpandedIndex(newIndex);
-    
-    // Focus the input after a short delay to ensure the DOM has updated
-    setTimeout(() => {
-      const emailInputs = document.querySelectorAll('input[type="email"]');
-      const newInput = emailInputs[emailInputs.length - 1];
-      if (newInput instanceof HTMLInputElement) {
-        newInput.focus();
-      }
-    }, 50);
   };
 
   const handleSaveChanges = async () => {
