@@ -41,9 +41,6 @@ importers:
       react-icons:
         specifier: ^5.3.0
         version: 5.3.0(react@18.3.1)
-      react-pull-to-refresh:
-        specifier: ^2.0.1
-        version: 2.0.1(react@18.3.1)
       react-router-dom:
         specifier: ^6.27.0
         version: 6.27.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1234,10 +1231,6 @@ packages:
     resolution: {integrity: sha512-pCcEwRi+TKpMlxAQObHDQ56KawURgyAf6jtIY046fJ5tIv3zDe/LEIubckAO8fj6JnAxLdmWkUfNyulQ2iKdEw==}
     engines: {node: '>=14.0.0'}
 
-  hammerjs@2.0.8:
-    resolution: {integrity: sha512-tSQXBXS/MWQOn/RKckawJ61vvsDpCom87JgxiYdGwHdOa0ht0vzUWDlfioofFCRU0L+6NGDt6XzbgoJvZkMeRQ==}
-    engines: {node: '>=0.8.0'}
-
   has-bigints@1.0.2:
     resolution: {integrity: sha512-tSvCKtBr9lkF0Ex0aQiP9N+OpV4zi2r/Nee5VkRDbaqv35RLYMzbwQfFSZZH0kR+Rd6302UJZ2p/bJCEoR3VoQ==}
 
@@ -1605,11 +1598,6 @@ packages:
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
-
-  react-pull-to-refresh@2.0.1:
-    resolution: {integrity: sha512-mbNI9r3sBF4X+2fBO8c9CuXDLIywNuoZ24AIGU3Odi+L8C4MpS0tuhMQUSg5cSOuUtDFkE8Z/YnBYixo10QI6Q==}
-    peerDependencies:
-      react: '>=16.8.0'
 
   react-refresh@0.14.2:
     resolution: {integrity: sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==}
@@ -3406,8 +3394,6 @@ snapshots:
       - encoding
       - supports-color
 
-  hammerjs@2.0.8: {}
-
   has-bigints@1.0.2: {}
 
   has-flag@4.0.0: {}
@@ -3745,11 +3731,6 @@ snapshots:
       react: 18.3.1
 
   react-is@16.13.1: {}
-
-  react-pull-to-refresh@2.0.1(react@18.3.1):
-    dependencies:
-      hammerjs: 2.0.8
-      react: 18.3.1
 
   react-refresh@0.14.2: {}
 
