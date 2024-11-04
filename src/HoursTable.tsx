@@ -27,6 +27,7 @@ interface TotalHours {
 const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = ({ reports, loading }) => {
 	const [dailyHours, setDailyHours] = useState<DailyHours>({});
 	const [names, setNames] = useState<string[]>([]);
+	const [monthLabelWidth, setMonthLabelWidth] = useState(0);
 
 	// Add ref for header and body
 	const tableRef = useRef<HTMLTableElement>(null);
@@ -145,6 +146,19 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 		return () => window.removeEventListener('resize', updateSpacerWidth);
 	}, [dailyHours, updateSpacerWidth]);
 
+	// Add function to update month label width
+	const updateMonthLabelWidth = useCallback(() => {
+		const width = document.documentElement.clientWidth;
+		setMonthLabelWidth(width);
+	}, []);
+
+	// Add effect to handle width updates
+	useEffect(() => {
+		updateMonthLabelWidth();
+		window.addEventListener('resize', updateMonthLabelWidth);
+		return () => window.removeEventListener('resize', updateMonthLabelWidth);
+	}, [updateMonthLabelWidth]);
+
 	return (
 		<div className="page-container">
 			<h1>Hours Worked</h1>
@@ -161,7 +175,7 @@ const HoursTable: React.FC<{ reports: HoursTableReport[], loading: boolean }> = 
 							
 							return (
 								<div key={month} className="month-section">
-									<div className="month-label">
+									<div className="month-label" style={{ width: `${monthLabelWidth}px` }}>
 										<h2>{month}</h2>
 									</div>
 									<div className="table-container" style={{ maxWidth: '800px', margin: '0 auto' }}>
