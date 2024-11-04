@@ -14,7 +14,6 @@ import { supabase } from './supabaseClient';
 
 const OFFLINE_QUEUE_KEY = 'offlineReportQueue';
 const MAX_QUEUE_ATTEMPTS = 3;
-const SUBMISSION_COOLDOWN = 2000;
 const MAX_QUEUE_SIZE = 50;
 
 interface Report {
@@ -123,6 +122,10 @@ const App: React.FC = () => {
 		message: ''
 	});
 
+	const DEV_CONFIG = {
+		DISABLE_CACHING: process.env.REACT_APP_DISABLE_CACHING === 'true'
+	};
+
 	const fetchReports = async () => {
 		console.log('fetch reports');
 
@@ -138,10 +141,6 @@ const App: React.FC = () => {
 			setReports(data ? data : []);
 		}
 		setLoadingReports(false);
-	};
-
-	const refreshReports = () => {
-		fetchReports(); // Call fetchReports to refresh data
 	};
 
 	// Move sorting logic to a function
@@ -317,6 +316,16 @@ const App: React.FC = () => {
 		return () => {
 			window.removeEventListener('online', handleOnline);
 		};
+	}, []);
+
+	useEffect(() => {
+		if (DEV_CONFIG.DISABLE_CACHING && 'serviceWorker' in navigator) {
+			navigator.serviceWorker.getRegistrations().then(function(registrations) {
+				for(let registration of registrations) {
+					registration.unregister();
+				}
+			});
+		}
 	}, []);
 
 	return (
