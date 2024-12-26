@@ -8,8 +8,10 @@ body {
 	overflow-x: auto;
 }
 
-html {
-	background-color: #1a1a1a;
+@media (prefers-color-scheme: dark) {
+	html {
+		background-color: #1a1a1a;
+	}
 }
 
 * {
@@ -259,19 +261,20 @@ h2.react-datepicker__current-month {
 	display: block;
 }
 
+.task-description {
+	width: 250px;
+	text-align: left;
+}
+
 .task-input {
 	display: flex;
 	gap: 10px;
 	margin-bottom: 10px;
 }
 
-.task-input input {
-	width: 100%;
-}
 
-.task-input input:first-of-type {
-	width: 150px;
-	text-align: center;
+.task-input input {
+	width: 110px;
 }
 
 #time-in-input,
