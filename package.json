@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fillout/react": "^1.1.2",
     "@floating-ui/dom": "^1.6.12",
     "@supabase/supabase-js": "^2.45.6",
     "date-fns": "^4.1.0",

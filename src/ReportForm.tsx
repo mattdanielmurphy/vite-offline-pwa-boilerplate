@@ -6,7 +6,7 @@ import { addDays, addHours, format, getDay, getHours, getMinutes, isAfter, isBef
 
 import ConfirmationModal from "./components/ConfirmationModal"
 import DatePicker from "react-datepicker"
-import { addToOfflineQueue } from "./App"
+import { addToOfflineQueue } from "./App-old"
 import { calculateHours } from "./utils/dateTime"
 import { defaultSchedule } from "./utils/defaults"
 import { shift } from "@floating-ui/dom" // Add this import

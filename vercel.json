@@ -1,39 +1,9 @@
 {
-    "headers": [
+    "version": 2,
+    "routes": [
         {
-            "source": "/(.*)",
-            "headers": [
-                {
-                    "key": "Cache-Control",
-                    "value": "no-store, must-revalidate"
-                },
-                {
-                    "key": "Pragma",
-                    "value": "no-cache"
-                },
-                {
-                    "key": "Expires",
-                    "value": "0"
-                }
-            ]
-        }
-    ],
-    "crons": [
-        {
-            "path": "/api/send-scheduled-reports",
-            "schedule": "0 0 * * *"
-        }
-    ],
-    "rewrites": [
-        {
-            "source": "/(.*)",
-            "destination": "/",
-            "has": [
-                {
-                    "type": "host",
-                    "value": "(?:.*\\.)?vercel\\.app"
-                }
-            ]
+            "src": "/api/notion/(.*)",
+            "dest": "/api/notion/[...path].ts"
         }
     ]
 }

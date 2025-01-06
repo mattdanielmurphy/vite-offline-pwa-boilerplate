@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@fillout/react':
+        specifier: ^1.1.2
+        version: 1.1.2
       '@floating-ui/dom':
         specifier: ^1.6.12
         version: 1.6.12
@@ -721,6 +724,9 @@ packages:
     engines: {node: '>=12'}
     cpu: [x64]
     os: [win32]
+
+  '@fillout/react@1.1.2':
+    resolution: {integrity: sha512-XyzLY74Zhxxwym3A9770Tb3NINwaaWyWwvaw1lMJ5sA/P6hgsdzvefUOqohzR3+KVyspvBOR4BoR0nBMPFd/Vw==}
 
   '@floating-ui/core@1.6.8':
     resolution: {integrity: sha512-7XJ9cPU+yI2QeLS+FCSlqNFZJq8arvswefkZrYI1yQBbftw6FyrZOxYSh+9S7z7TpeWlRt9zJ5IhM1WIL334jA==}
@@ -2734,6 +2740,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.18.20':
     optional: true
+
+  '@fillout/react@1.1.2': {}
 
   '@floating-ui/core@1.6.8':
     dependencies:
