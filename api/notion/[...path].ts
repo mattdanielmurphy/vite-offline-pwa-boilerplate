@@ -1,4 +1,4 @@
-import { NextApiRequest, NextApiResponse } from "next"
+import type { VercelRequest, VercelResponse } from "@vercel/node"
 
 import { createProxyMiddleware } from "http-proxy-middleware"
 
@@ -14,7 +14,7 @@ const proxy = createProxyMiddleware({
 	},
 })
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default function handler(req: VercelRequest, res: VercelResponse) {
 	// @ts-ignore
 	proxy(req, res, (result: any) => {
 		if (result instanceof Error) {
